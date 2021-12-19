@@ -1,0 +1,44 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: stanvonderhtlwienwestlol <dusek.s03@htlwienwest.at>
+Date: Sun, 19 Dec 2021 13:01:02 +0100
+Subject: [PATCH] Fix Sand Merging
+
+
+diff --git a/src/main/java/net/minecraft/server/level/ServerLevel.java b/src/main/java/net/minecraft/server/level/ServerLevel.java
+index 7ce85e084fd53a760b481909e4e64d8613e8a454..5259e7c0f71005ef6af9f10afdabbd0b3269ae66 100644
+--- a/src/main/java/net/minecraft/server/level/ServerLevel.java
++++ b/src/main/java/net/minecraft/server/level/ServerLevel.java
+@@ -90,6 +90,7 @@ import net.minecraft.world.entity.animal.WaterAnimal;
+ import net.minecraft.world.entity.animal.horse.SkeletonHorse;
+ import net.minecraft.world.entity.boss.EnderDragonPart;
+ import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
++import net.minecraft.world.entity.item.FallingBlockEntity;
+ import net.minecraft.world.entity.item.PrimedTnt;
+ import net.minecraft.world.entity.npc.Npc;
+ import net.minecraft.world.entity.player.Player;
+@@ -759,6 +760,10 @@ public class ServerLevel extends Level implements WorldGenLevel {
+                     ((PrimedTnt) entity).count+= ((PrimedTnt) prev[0]).count;
+                     prev[0].discard();
+                 }
++                else if (prev[0] instanceof FallingBlockEntity && entity instanceof FallingBlockEntity && prev[0].equals(entity)) {
++                    ((FallingBlockEntity) entity).count+= ((FallingBlockEntity) prev[0]).count;
++                    prev[0].discard();
++                }
+                 prev[0] = entity;
+             });
+ 
+diff --git a/src/main/java/net/minecraft/world/entity/item/FallingBlockEntity.java b/src/main/java/net/minecraft/world/entity/item/FallingBlockEntity.java
+index e041d3dc1711532bf09f57672a9617a7ebcddf83..3a55d0bd0dc7a6065b32a4212c1fbd7477657f0b 100644
+--- a/src/main/java/net/minecraft/world/entity/item/FallingBlockEntity.java
++++ b/src/main/java/net/minecraft/world/entity/item/FallingBlockEntity.java
+@@ -449,8 +449,8 @@ public class FallingBlockEntity extends Entity {
+                     this.getDeltaMovement().y == t.getDeltaMovement().y &&
+                     this.getDeltaMovement().z == t.getDeltaMovement().z &&
+                     this.getBoundingBox().equals(t.getBoundingBox()) &&
+-                    this.time == t.time &&
+-                    this.blockState == t.blockState
++                    //this.time == t.time &&
++                    this.blockState.equals(t.blockState)
+             );
+         } else {
+             return false;
