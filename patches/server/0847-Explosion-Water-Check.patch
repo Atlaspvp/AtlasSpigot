@@ -1,0 +1,118 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: stanvonderhtlwienwestlol <dusek.s03@htlwienwest.at>
+Date: Sun, 19 Dec 2021 03:49:20 +0100
+Subject: [PATCH] Explosion Water Check
+
+
+diff --git a/src/main/java/net/minecraft/world/level/Explosion.java b/src/main/java/net/minecraft/world/level/Explosion.java
+index 132140e00865fcf84ebe03ffcbc2f30ac11a0b35..b68d90028ebcb6820ebeb96e1fb6f65d7f345845 100644
+--- a/src/main/java/net/minecraft/world/level/Explosion.java
++++ b/src/main/java/net/minecraft/world/level/Explosion.java
+@@ -157,55 +157,64 @@ public class Explosion {
+         int i;
+         int j;
+ 
+-        for (int k = 0; k < 16; ++k) {
+-            for (i = 0; i < 16; ++i) {
+-                for (j = 0; j < 16; ++j) {
+-                    if (k == 0 || k == 15 || i == 0 || i == 15 || j == 0 || j == 15) {
+-                        double d0 = (double) ((float) k / 15.0F * 2.0F - 1.0F);
+-                        double d1 = (double) ((float) i / 15.0F * 2.0F - 1.0F);
+-                        double d2 = (double) ((float) j / 15.0F * 2.0F - 1.0F);
+-                        double d3 = Math.sqrt(d0 * d0 + d1 * d1 + d2 * d2);
+-
+-                        d0 /= d3;
+-                        d1 /= d3;
+-                        d2 /= d3;
+-                        float f = this.radius * (0.7F + this.level.random.nextFloat() * 0.6F);
+-                        double d4 = this.x;
+-                        double d5 = this.y;
+-                        double d6 = this.z;
+-
+-                        for (float f1 = 0.3F; f > 0.0F; f -= 0.22500001F) {
+-                            BlockPos blockposition = new BlockPos(d4, d5, d6);
+-                            BlockState iblockdata = this.level.getBlockState(blockposition);
+-                            if (!iblockdata.isDestroyable()) continue; // Paper
+-                            FluidState fluid = iblockdata.getFluidState(); // Paper
+-
+-                            if (!this.level.isInWorldBounds(blockposition)) {
+-                                break;
+-                            }
++        BlockPos blockpositionTNT = new BlockPos(this.x, this.y, this.z);
++        BlockState iblockdataTNT = this.level.getBlockState(blockpositionTNT);
++        Boolean inWater=false;
++        if (iblockdataTNT.getMaterial().isLiquid()) { //Herm, adding a influid check and canceling logic when in fluid during explosion.
++            inWater=true;
++        }
+ 
+-                            Optional<Float> optional = this.damageCalculator.getBlockExplosionResistance(this, this.level, blockposition, iblockdata, fluid);
++        if(inWater==false) {
++            for (int k = 0; k < 16; ++k) {
++                for (i = 0; i < 16; ++i) {
++                    for (j = 0; j < 16; ++j) {
++                        if (k == 0 || k == 15 || i == 0 || i == 15 || j == 0 || j == 15) {
++                            double d0 = (double) ((float) k / 15.0F * 2.0F - 1.0F);
++                            double d1 = (double) ((float) i / 15.0F * 2.0F - 1.0F);
++                            double d2 = (double) ((float) j / 15.0F * 2.0F - 1.0F);
++                            double d3 = Math.sqrt(d0 * d0 + d1 * d1 + d2 * d2);
++
++                            d0 /= d3;
++                            d1 /= d3;
++                            d2 /= d3;
++                            float f = this.radius * (0.7F + this.level.random.nextFloat() * 0.6F);
++                            double d4 = this.x;
++                            double d5 = this.y;
++                            double d6 = this.z;
++
++                            for (float f1 = 0.3F; f > 0.0F; f -= 0.22500001F) {
++                                BlockPos blockposition = new BlockPos(d4, d5, d6);
++                                BlockState iblockdata = this.level.getBlockState(blockposition);
++                                if (!iblockdata.isDestroyable()) continue; // Paper
++                                FluidState fluid = iblockdata.getFluidState(); // Paper
++
++                                if (!this.level.isInWorldBounds(blockposition)) {
++                                    break;
++                                }
+ 
+-                            if (optional.isPresent()) {
+-                                f -= ((Float) optional.get() + 0.3F) * 0.3F;
+-                            }
++                                Optional<Float> optional = this.damageCalculator.getBlockExplosionResistance(this, this.level, blockposition, iblockdata, fluid);
+ 
+-                            if (f > 0.0F && this.damageCalculator.shouldBlockExplode(this, this.level, blockposition, iblockdata, f)) {
+-                                set.add(blockposition);
+-                                // Paper start - prevent headless pistons from forming
+-                                if (!com.destroystokyo.paper.PaperConfig.allowHeadlessPistons && iblockdata.getBlock() == Blocks.MOVING_PISTON) {
+-                                    BlockEntity extension = this.level.getBlockEntity(blockposition);
+-                                    if (extension instanceof PistonMovingBlockEntity && ((PistonMovingBlockEntity) extension).isSourcePiston()) {
+-                                       Direction direction = iblockdata.getValue(PistonHeadBlock.FACING);
+-                                       set.add(blockposition.relative(direction.getOpposite()));
++                                if (optional.isPresent()) {
++                                    f -= ((Float) optional.get() + 0.3F) * 0.3F;
++                                }
++
++                                if (f > 0.0F && this.damageCalculator.shouldBlockExplode(this, this.level, blockposition, iblockdata, f)) {
++                                    set.add(blockposition);
++                                    // Paper start - prevent headless pistons from forming
++                                    if (!com.destroystokyo.paper.PaperConfig.allowHeadlessPistons && iblockdata.getBlock() == Blocks.MOVING_PISTON) {
++                                        BlockEntity extension = this.level.getBlockEntity(blockposition);
++                                        if (extension instanceof PistonMovingBlockEntity && ((PistonMovingBlockEntity) extension).isSourcePiston()) {
++                                            Direction direction = iblockdata.getValue(PistonHeadBlock.FACING);
++                                            set.add(blockposition.relative(direction.getOpposite()));
++                                        }
+                                     }
++                                    // Paper end
+                                 }
+-                                // Paper end
+-                            }
+ 
+-                            d4 += d0 * 0.30000001192092896D;
+-                            d5 += d1 * 0.30000001192092896D;
+-                            d6 += d2 * 0.30000001192092896D;
++                                d4 += d0 * 0.30000001192092896D;
++                                d5 += d1 * 0.30000001192092896D;
++                                d6 += d2 * 0.30000001192092896D;
++                            }
+                         }
+                     }
+                 }
