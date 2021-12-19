@@ -1,0 +1,452 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: stanvonderhtlwienwestlol <dusek.s03@htlwienwest.at>
+Date: Sun, 19 Dec 2021 03:55:29 +0100
+Subject: [PATCH] Cannoning Entity Merging Unmerging
+
+
+diff --git a/src/main/java/net/minecraft/server/level/ServerLevel.java b/src/main/java/net/minecraft/server/level/ServerLevel.java
+index d40a367670ccea01978cabf7d45f3c1a690662fc..7ce85e084fd53a760b481909e4e64d8613e8a454 100644
+--- a/src/main/java/net/minecraft/server/level/ServerLevel.java
++++ b/src/main/java/net/minecraft/server/level/ServerLevel.java
+@@ -90,6 +90,7 @@ import net.minecraft.world.entity.animal.WaterAnimal;
+ import net.minecraft.world.entity.animal.horse.SkeletonHorse;
+ import net.minecraft.world.entity.boss.EnderDragonPart;
+ import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
++import net.minecraft.world.entity.item.PrimedTnt;
+ import net.minecraft.world.entity.npc.Npc;
+ import net.minecraft.world.entity.player.Player;
+ import net.minecraft.world.entity.raid.Raid;
+@@ -497,7 +498,7 @@ public class ServerLevel extends Level implements WorldGenLevel {
+             this.liquidTicks = new com.destroystokyo.paper.server.ticklist.PaperTickList<>(this, predicate2, Registry.FLUID::getKey, this::tickLiquid, "Fluids"); // Paper timings
+         } else {
+             this.blockTicks = new ServerTickList<>(this, predicate, Registry.BLOCK::getKey, this::tickBlock, "Blocks"); // CraftBukkit - decompile error // Paper - Timings & copied from above
+-        this.liquidTicks = new ServerTickList<>(this, predicate2, Registry.FLUID::getKey, this::tickLiquid, "Fluids"); // CraftBukkit - decompile error // Paper - Timings
++            this.liquidTicks = new ServerTickList<>(this, predicate2, Registry.FLUID::getKey, this::tickLiquid, "Fluids"); // CraftBukkit - decompile error // Paper - Timings
+         }
+         this.navigatingMobs = new ObjectOpenHashSet();
+         this.blockEvents = new ObjectLinkedOpenHashSet();
+@@ -751,6 +752,16 @@ public class ServerLevel extends Level implements WorldGenLevel {
+                 gameprofilerfiller.pop();
+             }
+ 
++            //jesus modification - add stacking of tnt
++            final Entity[] prev = {null};
++            this.entityTickList.forEach(entity -> {
++                if (prev[0] instanceof PrimedTnt && entity instanceof PrimedTnt && prev[0].equals(entity)) {
++                    ((PrimedTnt) entity).count+= ((PrimedTnt) prev[0]).count;
++                    prev[0].discard();
++                }
++                prev[0] = entity;
++            });
++
+             org.spigotmc.ActivationRange.activateEntities(this); // Spigot
+             timings.entityTick.startTiming(); // Spigot
+             this.entityTickList.forEach((entity) -> {
+@@ -867,7 +878,7 @@ public class ServerLevel extends Level implements WorldGenLevel {
+         }
+ 
+         gameprofilerfiller.popPush("iceandsnow");
+-         if (!this.paperConfig.disableIceAndSnow && this.randomTickRandom.nextInt(16) == 0) { // Paper - Disable ice and snow // Paper - optimise random ticking
++        if (!this.paperConfig.disableIceAndSnow && this.randomTickRandom.nextInt(16) == 0) { // Paper - Disable ice and snow // Paper - optimise random ticking
+             // Paper start - optimise chunk ticking
+             this.getRandomBlockPosition(j, 0, k, 15, blockposition);
+             int normalY = chunk.getHeight(Heightmap.Types.MOTION_BLOCKING, blockposition.getX() & 15, blockposition.getZ() & 15) + 1;
+@@ -1091,9 +1102,9 @@ public class ServerLevel extends Level implements WorldGenLevel {
+                 currentlyTickingEntity.lazySet(entity);
+             }
+             // Paper end - log detailed entity tick information
+-        ++TimingHistory.entityTicks; // Paper - timings
+-        // Spigot start
+-        co.aikar.timings.Timing timer; // Paper
++            ++TimingHistory.entityTicks; // Paper - timings
++            // Spigot start
++            co.aikar.timings.Timing timer; // Paper
+         /*if (!org.spigotmc.ActivationRange.checkIfActive(entity)) { // Paper - comment out - EAR 2, reimplement below
+             entity.tickCount++;
+             timer = entity.getType().inactiveTickTimer.startTiming(); try { // Paper - timings
+@@ -1101,36 +1112,36 @@ public class ServerLevel extends Level implements WorldGenLevel {
+             } finally { timer.stopTiming(); } // Paper
+             return;
+         }*/ // Paper - comment out EAR 2
+-        // Spigot end
+-        // Paper start- timings
+-        final boolean isActive = org.spigotmc.ActivationRange.checkIfActive(entity);
+-        timer = isActive ? entity.getType().tickTimer.startTiming() : entity.getType().inactiveTickTimer.startTiming(); // Paper
+-        try {
+-        // Paper end - timings
+-        entity.setOldPosAndRot();
+-        ProfilerFiller gameprofilerfiller = this.getProfiler();
++            // Spigot end
++            // Paper start- timings
++            final boolean isActive = org.spigotmc.ActivationRange.checkIfActive(entity);
++            timer = isActive ? entity.getType().tickTimer.startTiming() : entity.getType().inactiveTickTimer.startTiming(); // Paper
++            try {
++                // Paper end - timings
++                entity.setOldPosAndRot();
++                ProfilerFiller gameprofilerfiller = this.getProfiler();
+ 
+-        ++entity.tickCount;
+-        this.getProfiler().push(() -> {
+-            return Registry.ENTITY_TYPE.getKey(entity.getType()).toString();
+-        });
+-        gameprofilerfiller.incrementCounter("tickNonPassenger");
+-        if (isActive) { // Paper - EAR 2
+-            TimingHistory.activatedEntityTicks++;
+-        entity.tick();
+-        entity.postTick(); // CraftBukkit
+-        } else { entity.inactiveTick(); } // Paper - EAR 2
+-        this.getProfiler().pop();
+-        } finally { timer.stopTiming(); } // Paper - timings
+-        Iterator iterator = entity.getPassengers().iterator();
++                ++entity.tickCount;
++                this.getProfiler().push(() -> {
++                    return Registry.ENTITY_TYPE.getKey(entity.getType()).toString();
++                });
++                gameprofilerfiller.incrementCounter("tickNonPassenger");
++                if (isActive) { // Paper - EAR 2
++                    TimingHistory.activatedEntityTicks++;
++                    entity.tick();
++                    entity.postTick(); // CraftBukkit
++                } else { entity.inactiveTick(); } // Paper - EAR 2
++                this.getProfiler().pop();
++            } finally { timer.stopTiming(); } // Paper - timings
++            Iterator iterator = entity.getPassengers().iterator();
+ 
+-        while (iterator.hasNext()) {
+-            Entity entity1 = (Entity) iterator.next();
++            while (iterator.hasNext()) {
++                Entity entity1 = (Entity) iterator.next();
+ 
+-            this.tickPassenger(entity, entity1);
+-        }
+-        // } finally { timer.stopTiming(); } // Paper - timings - move up
+-        // Paper start - log detailed entity tick information
++                this.tickPassenger(entity, entity1);
++            }
++            // } finally { timer.stopTiming(); } // Paper - timings - move up
++            // Paper start - log detailed entity tick information
+         } finally {
+             if (currentlyTickingEntity.get() == entity) {
+                 currentlyTickingEntity.lazySet(null);
+@@ -1146,36 +1157,36 @@ public class ServerLevel extends Level implements WorldGenLevel {
+                 final boolean isActive = org.spigotmc.ActivationRange.checkIfActive(passenger);
+                 co.aikar.timings.Timing timer = isActive ? passenger.getType().passengerTickTimer.startTiming() : passenger.getType().passengerInactiveTickTimer.startTiming(); // Paper
+                 try {
+-                // Paper end
+-                passenger.setOldPosAndRot();
+-                ++passenger.tickCount;
+-                ProfilerFiller gameprofilerfiller = this.getProfiler();
+-
+-                gameprofilerfiller.push(() -> {
+-                    return Registry.ENTITY_TYPE.getKey(passenger.getType()).toString();
+-                });
+-                gameprofilerfiller.incrementCounter("tickPassenger");
+-                // Paper start - EAR 2
+-                if (isActive) {
+-                passenger.rideTick();
+-                passenger.postTick(); // CraftBukkit
+-                } else {
+-                    passenger.setDeltaMovement(Vec3.ZERO);
+-                    passenger.inactiveTick();
+-                    // copied from inside of if (isPassenger()) of passengerTick, but that ifPassenger is unnecessary
+-                    vehicle.positionRider(passenger);
+-                }
+-                // Paper end - EAR 2
+-                gameprofilerfiller.pop();
+-                Iterator iterator = passenger.getPassengers().iterator();
++                    // Paper end
++                    passenger.setOldPosAndRot();
++                    ++passenger.tickCount;
++                    ProfilerFiller gameprofilerfiller = this.getProfiler();
++
++                    gameprofilerfiller.push(() -> {
++                        return Registry.ENTITY_TYPE.getKey(passenger.getType()).toString();
++                    });
++                    gameprofilerfiller.incrementCounter("tickPassenger");
++                    // Paper start - EAR 2
++                    if (isActive) {
++                        passenger.rideTick();
++                        passenger.postTick(); // CraftBukkit
++                    } else {
++                        passenger.setDeltaMovement(Vec3.ZERO);
++                        passenger.inactiveTick();
++                        // copied from inside of if (isPassenger()) of passengerTick, but that ifPassenger is unnecessary
++                        vehicle.positionRider(passenger);
++                    }
++                    // Paper end - EAR 2
++                    gameprofilerfiller.pop();
++                    Iterator iterator = passenger.getPassengers().iterator();
+ 
+-                while (iterator.hasNext()) {
+-                    Entity entity2 = (Entity) iterator.next();
++                    while (iterator.hasNext()) {
++                        Entity entity2 = (Entity) iterator.next();
+ 
+-                    this.tickPassenger(passenger, entity2);
+-                }
++                        this.tickPassenger(passenger, entity2);
++                    }
+ 
+-            } finally { timer.stopTiming(); }// Paper - EAR2 timings
++                } finally { timer.stopTiming(); }// Paper - EAR2 timings
+             }
+         } else {
+             passenger.stopRiding();
+@@ -1224,17 +1235,17 @@ public class ServerLevel extends Level implements WorldGenLevel {
+         if (!flag1) {
+             org.bukkit.Bukkit.getPluginManager().callEvent(new org.bukkit.event.world.WorldSaveEvent(getWorld())); // CraftBukkit
+             try (co.aikar.timings.Timing ignored = timings.worldSave.startTiming()) { // Paper
+-            if (progressListener != null) {
+-                progressListener.progressStartNoAbort(new TranslatableComponent("menu.savingLevel"));
+-            }
++                if (progressListener != null) {
++                    progressListener.progressStartNoAbort(new TranslatableComponent("menu.savingLevel"));
++                }
+ 
+-            this.saveLevelData();
+-            if (progressListener != null) {
+-                progressListener.progressStage(new TranslatableComponent("menu.savingChunks"));
+-            }
++                this.saveLevelData();
++                if (progressListener != null) {
++                    progressListener.progressStage(new TranslatableComponent("menu.savingChunks"));
++                }
+ 
+                 timings.worldSaveChunks.startTiming(); // Paper
+-            chunkproviderserver.save(flush);
++                chunkproviderserver.save(flush);
+                 timings.worldSaveChunks.stopTiming(); // Paper
+             }// Paper
+             if (flush) {
+@@ -1527,48 +1538,48 @@ public class ServerLevel extends Level implements WorldGenLevel {
+     public void sendBlockUpdated(BlockPos pos, BlockState oldState, BlockState newState, int flags) {
+         this.getChunkSource().blockChanged(pos);
+         if(this.paperConfig.updatePathfindingOnBlockUpdate) { // Paper - option to disable pathfinding updates
+-        VoxelShape voxelshape = oldState.getCollisionShape(this, pos);
+-        VoxelShape voxelshape1 = newState.getCollisionShape(this, pos);
+-
+-        if (Shapes.joinIsNotEmpty(voxelshape, voxelshape1, BooleanOp.NOT_SAME)) {
+-            // Paper start - optimise notify()
+-            io.papermc.paper.chunk.SingleThreadChunkRegionManager.Region region = this.getChunkSource().chunkMap.dataRegionManager.getRegion(pos.getX() >> 4, pos.getZ() >> 4);
+-            if (region == null) {
+-                return;
+-            }
+-            io.papermc.paper.util.maplist.IteratorSafeOrderedReferenceSet<Mob> navigatorsFromRegion = ((ChunkMap.DataRegionData)region.regionData).getNavigators();
+-            if (navigatorsFromRegion == null) {
+-                return;
+-            }
+-            io.papermc.paper.util.maplist.IteratorSafeOrderedReferenceSet.Iterator<Mob> iterator = navigatorsFromRegion.iterator();
++            VoxelShape voxelshape = oldState.getCollisionShape(this, pos);
++            VoxelShape voxelshape1 = newState.getCollisionShape(this, pos);
+ 
+-
+-            try { while (iterator.hasNext()) { // Paper end - optimise notify()
+-                // CraftBukkit start - fix SPIGOT-6362
+-                Mob entityinsentient;
+-                try {
+-                    entityinsentient = (Mob) iterator.next();
+-                } catch (java.util.ConcurrentModificationException ex) {
+-                    // This can happen because the pathfinder update below may trigger a chunk load, which in turn may cause more navigators to register
+-                    // In this case we just run the update again across all the iterators as the chunk will then be loaded
+-                    // As this is a relative edge case it is much faster than copying navigators (on either read or write)
+-                    this.sendBlockUpdated(pos, oldState, newState, flags);
++            if (Shapes.joinIsNotEmpty(voxelshape, voxelshape1, BooleanOp.NOT_SAME)) {
++                // Paper start - optimise notify()
++                io.papermc.paper.chunk.SingleThreadChunkRegionManager.Region region = this.getChunkSource().chunkMap.dataRegionManager.getRegion(pos.getX() >> 4, pos.getZ() >> 4);
++                if (region == null) {
+                     return;
+                 }
+-                // CraftBukkit end
+-                PathNavigation navigationabstract = entityinsentient.getNavigation();
++                io.papermc.paper.util.maplist.IteratorSafeOrderedReferenceSet<Mob> navigatorsFromRegion = ((ChunkMap.DataRegionData)region.regionData).getNavigators();
++                if (navigatorsFromRegion == null) {
++                    return;
++                }
++                io.papermc.paper.util.maplist.IteratorSafeOrderedReferenceSet.Iterator<Mob> iterator = navigatorsFromRegion.iterator();
++
++
++                try { while (iterator.hasNext()) { // Paper end - optimise notify()
++                    // CraftBukkit start - fix SPIGOT-6362
++                    Mob entityinsentient;
++                    try {
++                        entityinsentient = (Mob) iterator.next();
++                    } catch (java.util.ConcurrentModificationException ex) {
++                        // This can happen because the pathfinder update below may trigger a chunk load, which in turn may cause more navigators to register
++                        // In this case we just run the update again across all the iterators as the chunk will then be loaded
++                        // As this is a relative edge case it is much faster than copying navigators (on either read or write)
++                        this.sendBlockUpdated(pos, oldState, newState, flags);
++                        return;
++                    }
++                    // CraftBukkit end
++                    PathNavigation navigationabstract = entityinsentient.getNavigation();
+ 
+-                if (!navigationabstract.hasDelayedRecomputation()) {
+-                    navigationabstract.recomputePath(pos);
++                    if (!navigationabstract.hasDelayedRecomputation()) {
++                        navigationabstract.recomputePath(pos);
++                    }
+                 }
+-            }
+-            // Paper start - optimise notify()
+-            } finally {
+-                iterator.finishedIterating();
+-            }
+-            // Paper end - optimise notify()
++                    // Paper start - optimise notify()
++                } finally {
++                    iterator.finishedIterating();
++                }
++                // Paper end - optimise notify()
+ 
+-        }
++            }
+         } // Paper
+     }
+ 
+diff --git a/src/main/java/net/minecraft/world/entity/item/FallingBlockEntity.java b/src/main/java/net/minecraft/world/entity/item/FallingBlockEntity.java
+index 8336ea928faa92c6f58f8cdfb9faf1d8e26c9ccf..e041d3dc1711532bf09f57672a9617a7ebcddf83 100644
+--- a/src/main/java/net/minecraft/world/entity/item/FallingBlockEntity.java
++++ b/src/main/java/net/minecraft/world/entity/item/FallingBlockEntity.java
+@@ -57,6 +57,9 @@ public class FallingBlockEntity extends Entity {
+     public CompoundTag blockData;
+     protected static final EntityDataAccessor<BlockPos> DATA_START_POS = SynchedEntityData.defineId(FallingBlockEntity.class, EntityDataSerializers.BLOCK_POS);
+ 
++    //jesus modification - count for merging
++    public int count = 1;
++
+     public FallingBlockEntity(EntityType<? extends FallingBlockEntity> type, Level world) {
+         super(type, world);
+         this.blockState = Blocks.SAND.defaultBlockState();
+@@ -106,6 +109,9 @@ public class FallingBlockEntity extends Entity {
+ 
+     @Override
+     public void tick() {
++        //jesus modification - copy of entity to do unmerge
++        FallingBlockEntity bfb = this.clone();
++
+         // Paper start - fix sand duping
+         if (this.isRemoved()) {
+             return;
+@@ -149,6 +155,7 @@ public class FallingBlockEntity extends Entity {
+             }
+             // Paper end - fix sand duping
+ 
++
+             // Paper start - Configurable EntityFallingBlock height nerf
+             if (this.level.paperConfig.fallingBlockHeightNerf != 0 && this.getY() > this.level.paperConfig.fallingBlockHeightNerf) {
+                 if (this.dropItem && this.level.getGameRules().getBoolean(GameRules.RULE_DOENTITYDROPS)) {
+@@ -183,6 +190,14 @@ public class FallingBlockEntity extends Entity {
+                         this.discard();
+                     }
+                 } else {
++                    //jesus modification - unmerge
++                    if (this.count > 1) {
++                        for (int i = 0; i < this.count-1; i++) {
++                            bfb.clone().tick();
++                        }
++                    }
++                    bfb.discard();
++
+                     BlockState iblockdata = this.level.getBlockState(blockposition);
+ 
+                     this.setDeltaMovement(this.getDeltaMovement().multiply(0.7D, -0.5D, 0.7D));
+@@ -420,4 +435,35 @@ public class FallingBlockEntity extends Entity {
+         this.setPos(d0, d1 + (double) ((1.0F - this.getBbHeight()) / 2.0F), d2);
+         this.setStartPos(this.blockPosition());
+     }
++
++    //jesus modification - equals
++    @Override
++    public boolean equals(Object object) {
++        if (object instanceof  FallingBlockEntity) {
++            FallingBlockEntity t = (FallingBlockEntity) object;
++            return (
++                this.getY() == t.getY() &&
++                    this.getX() == t.getX() &&
++                    this.getZ() == t.getZ() &&
++                    this.getDeltaMovement().x == t.getDeltaMovement().x &&
++                    this.getDeltaMovement().y == t.getDeltaMovement().y &&
++                    this.getDeltaMovement().z == t.getDeltaMovement().z &&
++                    this.getBoundingBox().equals(t.getBoundingBox()) &&
++                    this.time == t.time &&
++                    this.blockState == t.blockState
++            );
++        } else {
++            return false;
++        }
++    }
++
++    //jesus modification - clone
++    @Override
++    public FallingBlockEntity clone(){
++        FallingBlockEntity neo = new FallingBlockEntity(this.level, this.getX(), this.getY(), this.getZ(), this.blockState);
++        neo.setDeltaMovement(this.getDeltaMovement());
++        neo.setBoundingBox(this.getBoundingBox());
++        neo.time = this.time;
++        return neo;
++    }
+ }
+diff --git a/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java b/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java
+index dcbd9ec44fb8d1334aca33c136b121ab5c25a0e2..a598528ab1fde68b30fbb7e2fbaf6b5c570d2395 100644
+--- a/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java
++++ b/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java
+@@ -27,6 +27,9 @@ public class PrimedTnt extends Entity {
+     public float yield = 4; // CraftBukkit - add field
+     public boolean isIncendiary = false; // CraftBukkit - add field
+ 
++    //jesus modifications - add count for tnt merging
++    public int count = 1;
++
+     public PrimedTnt(EntityType<? extends PrimedTnt> type, Level world) {
+         super(type, world);
+         this.blocksBuilding = true;
+@@ -62,6 +65,14 @@ public class PrimedTnt extends Entity {
+ 
+     @Override
+     public void tick() {
++        //jesus modification - execute merged tnt
++        if (this.getFuse() - 1 <= 0) {
++            for (int x = 0; x < this.count -1; x++) {
++                PrimedTnt merged = this.clone();
++                merged.tick();
++            }
++        }
++
+         if (level.spigotConfig.currentPrimedTnt++ > level.spigotConfig.maxTntTicksPerTick) { return; } // Spigot
+         if (!this.isNoGravity()) {
+             this.setDeltaMovement(this.getDeltaMovement().add(0.0D, -0.04D, 0.0D));
+@@ -180,4 +191,34 @@ public class PrimedTnt extends Entity {
+         return !level.paperConfig.preventTntFromMovingInWater && super.isPushedByFluid();
+     }
+     // Paper end
++
++    //jesus modification - equals
++    @Override
++    public boolean equals(Object object) {
++        if (object instanceof  PrimedTnt) {
++            PrimedTnt t = (PrimedTnt) object;
++            return (
++                this.getFuse() == t.getFuse() &&
++                    this.getY() == t.getY() &&
++                    this.getX() == t.getX() &&
++                    this.getZ() == t.getZ() &&
++                    this.getDeltaMovement().x == t.getDeltaMovement().x &&
++                    this.getDeltaMovement().y == t.getDeltaMovement().y &&
++                    this.getDeltaMovement().z == t.getDeltaMovement().z &&
++                    this.getBoundingBox().equals(t.getBoundingBox())
++            );
++        } else {
++            return false;
++        }
++    }
++
++    //jesus modification - clone
++    @Override
++    public PrimedTnt clone(){
++        PrimedTnt neo = new PrimedTnt(this.level, this.getX(), this.getY(), this.getZ(), this.owner);
++        neo.setFuse(this.getFuse());
++        neo.setDeltaMovement(this.getDeltaMovement());
++        neo.setBoundingBox(this.getBoundingBox());
++        return neo;
++    }
+ }
