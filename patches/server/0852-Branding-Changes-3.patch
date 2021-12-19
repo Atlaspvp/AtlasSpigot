@@ -1,0 +1,19 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: stanvonderhtlwienwestlol <dusek.s03@htlwienwest.at>
+Date: Sun, 19 Dec 2021 13:11:05 +0100
+Subject: [PATCH] Branding Changes 3
+
+
+diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
+index 5a4172faaf960d48939d6a485719041987df9242..e5e6c01447c85e77ecd28d3e7d8362e23352e722 100644
+--- a/src/main/java/net/minecraft/server/MinecraftServer.java
++++ b/src/main/java/net/minecraft/server/MinecraftServer.java
+@@ -1729,7 +1729,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+ 
+     @DontObfuscate
+     public String getServerModName() {
+-        return "Paper"; // Paper - Paper > // Spigot - Spigot > // CraftBukkit - cb > vanilla!
++        return "AtlasSpigot";
+     }
+ 
+     public SystemReport fillSystemReport(SystemReport details) {
