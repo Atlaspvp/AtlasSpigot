@@ -10,5 +10,6 @@ Current Features:
 - Explosion Water Check
 - Explode Waterlogged Blocks
 - Explode Lava
+- Disable TNT Spread
 
 Made by _Hermelijn15_ and _jesus_is_hot_, thanks to _Gromit_, _Suicidalkids_ and _bantuerfei_ for helping.
