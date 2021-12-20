@@ -1,0 +1,89 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: stanvonderhtlwienwestlol <dusek.s03@htlwienwest.at>
+Date: Mon, 20 Dec 2021 15:22:56 +0100
+Subject: [PATCH] Add SkipRayOrigin Optimisation
+
+
+diff --git a/src/main/java/net/atlaspvp/AtlasConfig.java b/src/main/java/net/atlaspvp/AtlasConfig.java
+index 0bb294e97d5bc5eae07daf630152fe36958b7c2a..23efb4fbf36f7f6c986ef0b04bbcddc66b91d0ed 100644
+--- a/src/main/java/net/atlaspvp/AtlasConfig.java
++++ b/src/main/java/net/atlaspvp/AtlasConfig.java
+@@ -212,4 +212,9 @@ public class AtlasConfig {
+     private static void TNTspread() {
+         TNTspread = getBoolean("settings.patches.do-tnt-spread", true);
+     }
++
++    public static boolean SkipRayOrigin;
++    private static void SkipRayOrigin() {
++        SkipRayOrigin = getBoolean("settings.cannons.skip-ray-origin", true);
++    }
+ }
+diff --git a/src/main/java/net/minecraft/world/level/Explosion.java b/src/main/java/net/minecraft/world/level/Explosion.java
+index b658ad84d2184b7e64542c01304e9966b5657f38..6d0103fabf859db017678ab57d9dccc2487e06a3 100644
+--- a/src/main/java/net/minecraft/world/level/Explosion.java
++++ b/src/main/java/net/minecraft/world/level/Explosion.java
+@@ -170,8 +170,9 @@ public class Explosion {
+         { //Herm, adding a influid check and canceling logic when in fluid during explosion - jesus also adding check for config here
+             if ((AtlasConfig.ExplodeLava == true && iblockdataTNT.getMaterial() != Material.LAVA) || AtlasConfig.ExplodeLava == false) inWater = true;
+         }
+-
+-        if(inWater==false) {
++        boolean firstloop = false;
++        Optional<Float> cachedOptional = Optional.empty();
++        if(!inWater) {
+             for (int k = 0; k < 16; ++k) {
+                 for (i = 0; i < 16; ++i) {
+                     for (j = 0; j < 16; ++j) {
+@@ -189,11 +190,27 @@ public class Explosion {
+                             double d5 = this.y;
+                             double d6 = this.z;
+ 
++                            if(firstloop && AtlasConfig.SkipRayOrigin) {
++                                //if not the first loop
++                                // substract cachedoptional from f if its present
++                                // increase d4 d5 d6
++                                // do f -= 0.22500001F
++                                if (cachedOptional.isPresent()){
++                                    f -= ((Float) cachedOptional.get() + 0.3F) * 0.3F;
++                                }
++                                d4 += d0 * 0.30000001192092896D;
++                                d5 += d1 * 0.30000001192092896D;
++                                d6 += d2 * 0.30000001192092896D;
++                                f -= 0.22500001F;
++
++                            }
++
+                             for (float f1 = 0.3F; f > 0.0F; f -= 0.22500001F) {
+                                 BlockPos blockposition = new BlockPos(d4, d5, d6);
+                                 BlockState iblockdata = this.level.getBlockState(blockposition);
+                                 if (!iblockdata.isDestroyable()) continue; // Paper
+                                 FluidState fluid = iblockdata.getFluidState(); // Paper
++                                Material material = iblockdata.getMaterial(); // Atlas
+ 
+                                 if (!this.level.isInWorldBounds(blockposition)) {
+                                     break;
+@@ -205,8 +222,14 @@ public class Explosion {
+                                     f -= ((Float) optional.get() + 0.3F) * 0.3F;
+                                 }
+ 
++                                //cache the first floop optional
++                                if (!firstloop) {
++                                    cachedOptional = optional;
++                                    firstloop = true;
++                                }
++
+                                 //atlas explode waterlogged blocks
+-                                if (AtlasConfig.ExplodeWaterloggedBlocks == true && !iblockdata.getFluidState().isEmpty() && !iblockdata.getMaterial().isLiquid()) {
++                                if (AtlasConfig.ExplodeWaterloggedBlocks == true && !fluid.isEmpty() && !material.isLiquid()) {
+                                     //org.bukkit.Bukkit.getLogger().info("waterlogged detected");
+                                     //this doesnt work idk why
+                                     //iblockdata.setValue(BlockStateProperties.WATERLOGGED, false);
+@@ -215,7 +238,7 @@ public class Explosion {
+                                 }
+ 
+                                 //atlas explode lava
+-                                if (AtlasConfig.ExplodeLava == true && iblockdata.getMaterial() == Material.LAVA) {
++                                if (AtlasConfig.ExplodeLava == true && material == Material.LAVA) {
+                                     set.add(blockposition);
+                                 }
+ 
