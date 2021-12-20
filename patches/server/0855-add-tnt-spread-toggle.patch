@@ -1,0 +1,48 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: BuildTools <unconfigured@null.spigotmc.org>
+Date: Mon, 20 Dec 2021 03:07:26 +0100
+Subject: [PATCH] -add tnt spread toggle
+
+
+diff --git a/src/main/java/net/atlaspvp/AtlasConfig.java b/src/main/java/net/atlaspvp/AtlasConfig.java
+index a53673176e68b103dc4dc38e7feab231b3d5c8a0..0bb294e97d5bc5eae07daf630152fe36958b7c2a 100644
+--- a/src/main/java/net/atlaspvp/AtlasConfig.java
++++ b/src/main/java/net/atlaspvp/AtlasConfig.java
+@@ -207,4 +207,9 @@ public class AtlasConfig {
+     private static void ExplodeLava() {
+         ExplodeLava = getBoolean("settings.patches.explode-lava", false);
+     }
++
++    public static boolean TNTspread;
++    private static void TNTspread() {
++        TNTspread = getBoolean("settings.patches.do-tnt-spread", true);
++    }
+ }
+diff --git a/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java b/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java
+index a598528ab1fde68b30fbb7e2fbaf6b5c570d2395..4787b71b67493512e9b538c3df8b3a984c6c5e49 100644
+--- a/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java
++++ b/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java
+@@ -1,6 +1,8 @@
+ package net.minecraft.world.entity.item;
+ 
+ import javax.annotation.Nullable;
++
++import net.atlaspvp.AtlasConfig;
+ import net.minecraft.core.particles.ParticleTypes;
+ import net.minecraft.nbt.CompoundTag;
+ import net.minecraft.network.protocol.Packet;
+@@ -38,9 +40,12 @@ public class PrimedTnt extends Entity {
+     public PrimedTnt(Level world, double x, double y, double z, @Nullable LivingEntity igniter) {
+         this(EntityType.TNT, world);
+         this.setPos(x, y, z);
+-        double d3 = world.random.nextDouble() * 6.2831854820251465D;
+ 
+-        this.setDeltaMovement(-Math.sin(d3) * 0.02D, 0.20000000298023224D, -Math.cos(d3) * 0.02D);
++        if(AtlasConfig.TNTspread){
++            double d3 = world.random.nextDouble() * 6.2831854820251465D;
++            this.setDeltaMovement(-Math.sin(d3) * 0.02D, 0.20000000298023224D, -Math.cos(d3) * 0.02D);
++        } else {this.setDeltaMovement(0D, 0.20000000298023224D, 0D);}
++
+         this.setFuse(80);
+         this.xo = x;
+         this.yo = y;
