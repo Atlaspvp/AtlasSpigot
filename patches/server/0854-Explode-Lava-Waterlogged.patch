@@ -1,0 +1,87 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: stanvonderhtlwienwestlol <dusek.s03@htlwienwest.at>
+Date: Mon, 20 Dec 2021 01:22:17 +0100
+Subject: [PATCH] Explode Lava Waterlogged
+
+
+diff --git a/src/main/java/net/atlaspvp/AtlasConfig.java b/src/main/java/net/atlaspvp/AtlasConfig.java
+index df3cf17ba7e206c399b5bc6199608ba54376f1f0..a53673176e68b103dc4dc38e7feab231b3d5c8a0 100644
+--- a/src/main/java/net/atlaspvp/AtlasConfig.java
++++ b/src/main/java/net/atlaspvp/AtlasConfig.java
+@@ -197,4 +197,14 @@ public class AtlasConfig {
+     private static void skipBlockDamageIfWatered() {
+         skipBlockDamageIfWatered = getBoolean("settings.cannons.skip-block-damage-if-watered", true);
+     }
++
++    public static boolean ExplodeWaterloggedBlocks;
++    private static void ExplodeWaterloggedBlocks() {
++        ExplodeWaterloggedBlocks = getBoolean("settings.patches.explode-waterlogged-blocks", false);
++    }
++
++    public static boolean ExplodeLava;
++    private static void ExplodeLava() {
++        ExplodeLava = getBoolean("settings.patches.explode-lava", false);
++    }
+ }
+diff --git a/src/main/java/net/minecraft/world/level/Explosion.java b/src/main/java/net/minecraft/world/level/Explosion.java
+index 1a845a21966eca29293d8a2a265478e73b120d5d..b658ad84d2184b7e64542c01304e9966b5657f38 100644
+--- a/src/main/java/net/minecraft/world/level/Explosion.java
++++ b/src/main/java/net/minecraft/world/level/Explosion.java
+@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
+ import com.google.common.collect.Maps;
+ import com.google.common.collect.Sets;
+ import com.mojang.datafixers.util.Pair;
++import com.sun.jna.platform.unix.X11;
+ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+ import it.unimi.dsi.fastutil.objects.ObjectListIterator;
+ import java.util.Collections;
+@@ -41,13 +42,16 @@ import net.minecraft.world.level.block.entity.BlockEntity;
+ import net.minecraft.world.level.block.piston.PistonHeadBlock;
+ import net.minecraft.world.level.block.piston.PistonMovingBlockEntity;
+ import net.minecraft.world.level.block.state.BlockState;
++import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+ import net.minecraft.world.level.gameevent.GameEvent;
+ import net.minecraft.world.level.material.FluidState;
++import net.minecraft.world.level.material.Material;
+ import net.minecraft.world.level.storage.loot.LootContext;
+ import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
+ import net.minecraft.world.phys.AABB;
+ import net.minecraft.world.phys.HitResult;
+ import net.minecraft.world.phys.Vec3;
++import org.bukkit.block.data.Waterlogged;
+ import org.bukkit.craftbukkit.event.CraftEventFactory;
+ import org.bukkit.event.entity.EntityExplodeEvent;
+ import org.bukkit.Location;
+@@ -162,8 +166,9 @@ public class Explosion {
+         BlockPos blockpositionTNT = new BlockPos(this.x, this.y, this.z);
+         BlockState iblockdataTNT = this.level.getBlockState(blockpositionTNT);
+         Boolean inWater=false;
+-        if (iblockdataTNT.getMaterial().isLiquid() && AtlasConfig.skipBlockDamageIfWatered == true) { //Herm, adding a influid check and canceling logic when in fluid during explosion - jesus also adding check for config here
+-            inWater=true;
++        if (iblockdataTNT.getMaterial().isLiquid() && AtlasConfig.skipBlockDamageIfWatered == true)
++        { //Herm, adding a influid check and canceling logic when in fluid during explosion - jesus also adding check for config here
++            if ((AtlasConfig.ExplodeLava == true && iblockdataTNT.getMaterial() != Material.LAVA) || AtlasConfig.ExplodeLava == false) inWater = true;
+         }
+ 
+         if(inWater==false) {
+@@ -200,6 +205,20 @@ public class Explosion {
+                                     f -= ((Float) optional.get() + 0.3F) * 0.3F;
+                                 }
+ 
++                                //atlas explode waterlogged blocks
++                                if (AtlasConfig.ExplodeWaterloggedBlocks == true && !iblockdata.getFluidState().isEmpty() && !iblockdata.getMaterial().isLiquid()) {
++                                    //org.bukkit.Bukkit.getLogger().info("waterlogged detected");
++                                    //this doesnt work idk why
++                                    //iblockdata.setValue(BlockStateProperties.WATERLOGGED, false);
++
++                                    set.add(blockposition);
++                                }
++
++                                //atlas explode lava
++                                if (AtlasConfig.ExplodeLava == true && iblockdata.getMaterial() == Material.LAVA) {
++                                    set.add(blockposition);
++                                }
++
+                                 if (f > 0.0F && this.damageCalculator.shouldBlockExplode(this, this.level, blockposition, iblockdata, f)) {
+                                     set.add(blockposition);
+                                     // Paper start - prevent headless pistons from forming
