@@ -1,0 +1,142 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: stanvonderhtlwienwestlol <dusek.s03@htlwienwest.at>
+Date: Mon, 20 Dec 2021 23:01:24 +0100
+Subject: [PATCH] Tnt and FallingBlock Chunkloading
+
+
+diff --git a/src/main/java/io/papermc/paper/util/CollisionUtil.java b/src/main/java/io/papermc/paper/util/CollisionUtil.java
+index 98ca1199a823cdf55b913396ce0a24554e85f116..f29de5f94ca1392d8b65d7051457ced66bce4287 100644
+--- a/src/main/java/io/papermc/paper/util/CollisionUtil.java
++++ b/src/main/java/io/papermc/paper/util/CollisionUtil.java
+@@ -2,18 +2,19 @@ package io.papermc.paper.util;
+ 
+ import io.papermc.paper.voxel.AABBVoxelShape;
+ import net.minecraft.core.BlockPos;
+-import net.minecraft.server.level.ServerChunkCache;
+-import net.minecraft.server.level.ServerLevel;
+-import net.minecraft.server.level.WorldGenRegion;
++import net.minecraft.server.MinecraftServer;
++import net.minecraft.server.level.*;
+ import net.minecraft.util.Mth;
+ import net.minecraft.world.entity.Entity;
+ import net.minecraft.world.item.Item;
++import net.minecraft.world.level.ChunkPos;
+ import net.minecraft.world.level.CollisionGetter;
+ import net.minecraft.world.level.EntityGetter;
+ import net.minecraft.world.level.block.Blocks;
+ import net.minecraft.world.level.block.state.BlockState;
+ import net.minecraft.world.level.border.WorldBorder;
+ import net.minecraft.world.level.chunk.ChunkAccess;
++import net.minecraft.world.level.chunk.LevelChunk;
+ import net.minecraft.world.level.chunk.LevelChunkSection;
+ import net.minecraft.world.level.material.FlowingFluid;
+ import net.minecraft.world.level.material.FluidState;
+@@ -24,6 +25,9 @@ import net.minecraft.world.phys.shapes.CollisionContext;
+ import net.minecraft.world.phys.shapes.EntityCollisionContext;
+ import net.minecraft.world.phys.shapes.Shapes;
+ import net.minecraft.world.phys.shapes.VoxelShape;
++import org.bukkit.Bukkit;
++import org.bukkit.Chunk;
++
+ import java.util.List;
+ import java.util.Optional;
+ import java.util.function.BiPredicate;
+@@ -468,6 +472,11 @@ public final class CollisionUtil {
+                 } else {
+                     chunk = loadChunks ? chunkProvider.getChunk(currChunkX, currChunkZ, true) : chunkProvider.getChunkAtIfLoadedImmediately(currChunkX, currChunkZ);
+                 }
++                if (loadChunks && ((LevelChunk) chunk).level.getChunkSource().isChunkLoaded(currChunkX, currChunkZ)) {
++                    DistanceManager dm = ((LevelChunk) chunk).level.getChunkSource().chunkMap.distanceManager;
++                    dm.addTicketAtLevel(TicketType.TNT_LOADER, chunk.getPos() , 31, MinecraftServer.currentTick);
++                }
++
+ 
+ 
+                 if (chunk == null) {
+diff --git a/src/main/java/net/atlaspvp/AtlasConfig.java b/src/main/java/net/atlaspvp/AtlasConfig.java
+index 23efb4fbf36f7f6c986ef0b04bbcddc66b91d0ed..c0a3a5af8b1f42498028eb228cfc2ccb220572c9 100644
+--- a/src/main/java/net/atlaspvp/AtlasConfig.java
++++ b/src/main/java/net/atlaspvp/AtlasConfig.java
+@@ -217,4 +217,19 @@ public class AtlasConfig {
+     private static void SkipRayOrigin() {
+         SkipRayOrigin = getBoolean("settings.cannons.skip-ray-origin", true);
+     }
++
++    public static boolean TntLoadsChunks;
++    private static void TntLoadsChunks() {
++        TntLoadsChunks = getBoolean("settings.chunks.tnt-loads-chunks", false);
++    }
++
++    public static boolean FallingblockLoadsChunks;
++    private static void FallingblockLoadsChunks() {
++        FallingblockLoadsChunks = getBoolean("settings.chunks.fallingblock-loads-chunks", false);
++    }
++
++    public static int LoadChunksForTicks;
++    private static void LoadCHunksForTicks() {
++        LoadChunksForTicks = getInt("settings.chunks.load-chunks-for-ticks", 2);
++    }
+ }
+diff --git a/src/main/java/net/minecraft/server/level/ServerLevel.java b/src/main/java/net/minecraft/server/level/ServerLevel.java
+index 210afc24114db812d343674c2ccad34149de1630..25ba639c83c7648a29a969d01f8cd0c33cae4430 100644
+--- a/src/main/java/net/minecraft/server/level/ServerLevel.java
++++ b/src/main/java/net/minecraft/server/level/ServerLevel.java
+@@ -573,6 +573,9 @@ public class ServerLevel extends Level implements WorldGenLevel {
+     }
+ 
+     public void tick(BooleanSupplier shouldKeepTicking) {
++        DistanceManager dm = this.getChunkSource().chunkMap.distanceManager;
++        dm.removeAllTicketsFor(TicketType.TNT_LOADER, 31, MinecraftServer.currentTick-AtlasConfig.LoadChunksForTicks);
++
+         // Paper start - optimise checkDespawn
+         this.playersAffectingSpawning.clear();
+         for (ServerPlayer player : this.players) {
+diff --git a/src/main/java/net/minecraft/server/level/TicketType.java b/src/main/java/net/minecraft/server/level/TicketType.java
+index ae46429264e6a7e5c88b6b6a41a6df4db7b3e70d..e986a9131ffa02709b9362447b48f3cc8bc5e0cb 100644
+--- a/src/main/java/net/minecraft/server/level/TicketType.java
++++ b/src/main/java/net/minecraft/server/level/TicketType.java
+@@ -11,6 +11,7 @@ public class TicketType<T> {
+     public static final TicketType<Long> ASYNC_LOAD = create("async_load", Long::compareTo); // Paper
+     public static final TicketType<ChunkPos> PRIORITY = create("priority", Comparator.comparingLong(ChunkPos::toLong), 300); // Paper
+     public static final TicketType<ChunkPos> URGENT = create("urgent", Comparator.comparingLong(ChunkPos::toLong), 300); // Paper
++    public static final TicketType<Integer> TNT_LOADER = create("tnt_loader", Integer::compareTo); //atlas
+ 
+     private final String name;
+     private final Comparator<T> comparator;
+diff --git a/src/main/java/net/minecraft/world/entity/Entity.java b/src/main/java/net/minecraft/world/entity/Entity.java
+index b7c4700fd5db14c77e7ee78311dd77a754d9d41c..956ada28819947549075640adbc8417d89e9a6d4 100644
+--- a/src/main/java/net/minecraft/world/entity/Entity.java
++++ b/src/main/java/net/minecraft/world/entity/Entity.java
+@@ -20,6 +20,8 @@ import java.util.concurrent.atomic.AtomicInteger;
+ import java.util.function.Predicate;
+ import java.util.stream.Stream;
+ import javax.annotation.Nullable;
++
++import net.atlaspvp.AtlasConfig;
+ import net.minecraft.BlockUtil;
+ import net.minecraft.CrashReport;
+ import net.minecraft.CrashReportCategory;
+@@ -71,7 +73,9 @@ import net.minecraft.world.Nameable;
+ import net.minecraft.world.damagesource.DamageSource;
+ import net.minecraft.world.entity.animal.AbstractFish;
+ import net.minecraft.world.entity.animal.Animal;
++import net.minecraft.world.entity.item.FallingBlockEntity;
+ import net.minecraft.world.entity.item.ItemEntity;
++import net.minecraft.world.entity.item.PrimedTnt;
+ import net.minecraft.world.entity.player.Player;
+ import net.minecraft.world.entity.vehicle.Boat;
+ import net.minecraft.world.item.ItemStack;
+@@ -1264,7 +1268,12 @@ public abstract class Entity implements Nameable, EntityAccess, CommandSource, n
+                 }
+             }
+ 
+-            io.papermc.paper.util.CollisionUtil.getCollisions(world, this, collisionBox, potentialCollisions, false, true,
++
++            boolean load = false;
++            if (this instanceof PrimedTnt && AtlasConfig.TntLoadsChunks) load = true;
++            if (this instanceof FallingBlockEntity && AtlasConfig.FallingblockLoadsChunks) load = true;
++
++            io.papermc.paper.util.CollisionUtil.getCollisions(world, this, collisionBox, potentialCollisions, load, true,
+                 false, false, null, null);
+ 
+             if (io.papermc.paper.util.CollisionUtil.isCollidingWithBorderEdge(world.getWorldBorder(), collisionBox)) {
