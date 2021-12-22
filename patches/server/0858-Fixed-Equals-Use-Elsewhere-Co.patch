@@ -1,0 +1,112 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: stanvonderhtlwienwestlol <dusek.s03@htlwienwest.at>
+Date: Wed, 22 Dec 2021 15:38:29 +0100
+Subject: [PATCH] Fixed Equals Use Elsewhere Co
+
+
+diff --git a/src/main/java/net/minecraft/server/level/ServerLevel.java b/src/main/java/net/minecraft/server/level/ServerLevel.java
+index 25ba639c83c7648a29a969d01f8cd0c33cae4430..19b04e960d0923a61ceb6ea5be4d277be07383f7 100644
+--- a/src/main/java/net/minecraft/server/level/ServerLevel.java
++++ b/src/main/java/net/minecraft/server/level/ServerLevel.java
+@@ -762,14 +762,16 @@ public class ServerLevel extends Level implements WorldGenLevel {
+             if (AtlasConfig.mergeEntities == true) {
+                 final Entity[] prev = {null};
+                 this.entityTickList.forEach(entity -> {
+-                    if (prev[0] instanceof PrimedTnt && entity instanceof PrimedTnt && prev[0].equals(entity)) {
+-                        ((PrimedTnt) entity).count += ((PrimedTnt) prev[0]).count;
+-                        prev[0].discard();
+-                    } else if (prev[0] instanceof FallingBlockEntity && entity instanceof FallingBlockEntity && prev[0].equals(entity)) {
+-                        ((FallingBlockEntity) entity).count += ((FallingBlockEntity) prev[0]).count;
+-                        prev[0].discard();
++                    if (prev[0] instanceof PrimedTnt || prev[0] instanceof FallingBlockEntity) {
++                        if (prev[0] instanceof PrimedTnt && entity instanceof PrimedTnt && ((PrimedTnt) prev[0]).equalsMerge((PrimedTnt) entity)) {
++                            ((PrimedTnt) entity).count += ((PrimedTnt) prev[0]).count;
++                            prev[0].discard();
++                        } else if (prev[0] instanceof FallingBlockEntity && entity instanceof FallingBlockEntity && ((FallingBlockEntity) prev[0]).equalsMerge((FallingBlockEntity) entity)) {
++                            ((FallingBlockEntity) entity).count += ((FallingBlockEntity) prev[0]).count;
++                            prev[0].discard();
++                        }
++                        prev[0] = entity;
+                     }
+-                    prev[0] = entity;
+                 });
+             }
+ 
+diff --git a/src/main/java/net/minecraft/world/entity/item/FallingBlockEntity.java b/src/main/java/net/minecraft/world/entity/item/FallingBlockEntity.java
+index 3a55d0bd0dc7a6065b32a4212c1fbd7477657f0b..443c138c2dfa467879e90f68f9297c4812edf6e5 100644
+--- a/src/main/java/net/minecraft/world/entity/item/FallingBlockEntity.java
++++ b/src/main/java/net/minecraft/world/entity/item/FallingBlockEntity.java
+@@ -437,24 +437,17 @@ public class FallingBlockEntity extends Entity {
+     }
+ 
+     //jesus modification - equals
+-    @Override
+-    public boolean equals(Object object) {
+-        if (object instanceof  FallingBlockEntity) {
+-            FallingBlockEntity t = (FallingBlockEntity) object;
+-            return (
+-                this.getY() == t.getY() &&
+-                    this.getX() == t.getX() &&
+-                    this.getZ() == t.getZ() &&
+-                    this.getDeltaMovement().x == t.getDeltaMovement().x &&
+-                    this.getDeltaMovement().y == t.getDeltaMovement().y &&
+-                    this.getDeltaMovement().z == t.getDeltaMovement().z &&
+-                    this.getBoundingBox().equals(t.getBoundingBox()) &&
+-                    //this.time == t.time &&
+-                    this.blockState.equals(t.blockState)
+-            );
+-        } else {
+-            return false;
+-        }
++    public boolean equalsMerge(FallingBlockEntity t) {
++        return (this.getY() == t.getY() &&
++                this.getX() == t.getX() &&
++                this.getZ() == t.getZ() &&
++                this.getDeltaMovement().x == t.getDeltaMovement().x &&
++                this.getDeltaMovement().y == t.getDeltaMovement().y &&
++                this.getDeltaMovement().z == t.getDeltaMovement().z &&
++                this.getBoundingBox().equals(t.getBoundingBox()) &&
++                //this.time == t.time &&
++                this.blockState.equals(t.blockState)
++        );
+     }
+ 
+     //jesus modification - clone
+diff --git a/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java b/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java
+index 4787b71b67493512e9b538c3df8b3a984c6c5e49..4d9a6f2e6818d84a26b4781000858e943a7f28e6 100644
+--- a/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java
++++ b/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java
+@@ -198,23 +198,16 @@ public class PrimedTnt extends Entity {
+     // Paper end
+ 
+     //jesus modification - equals
+-    @Override
+-    public boolean equals(Object object) {
+-        if (object instanceof  PrimedTnt) {
+-            PrimedTnt t = (PrimedTnt) object;
+-            return (
+-                this.getFuse() == t.getFuse() &&
+-                    this.getY() == t.getY() &&
+-                    this.getX() == t.getX() &&
+-                    this.getZ() == t.getZ() &&
+-                    this.getDeltaMovement().x == t.getDeltaMovement().x &&
+-                    this.getDeltaMovement().y == t.getDeltaMovement().y &&
+-                    this.getDeltaMovement().z == t.getDeltaMovement().z &&
+-                    this.getBoundingBox().equals(t.getBoundingBox())
+-            );
+-        } else {
+-            return false;
+-        }
++    public boolean equalsMerge(PrimedTnt t) {
++        return (this.getFuse() == t.getFuse() &&
++                this.getY() == t.getY() &&
++                this.getX() == t.getX() &&
++                this.getZ() == t.getZ() &&
++                this.getDeltaMovement().x == t.getDeltaMovement().x &&
++                this.getDeltaMovement().y == t.getDeltaMovement().y &&
++                this.getDeltaMovement().z == t.getDeltaMovement().z &&
++                this.getBoundingBox().equals(t.getBoundingBox())
++        );
+     }
+ 
+     //jesus modification - clone
