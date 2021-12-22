@@ -1,0 +1,18 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: stanvonderhtlwienwestlol <dusek.s03@htlwienwest.at>
+Date: Wed, 22 Dec 2021 23:43:04 +0100
+Subject: [PATCH] Fix Clone TnT Jump
+
+
+diff --git a/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java b/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java
+index 4d9a6f2e6818d84a26b4781000858e943a7f28e6..c1395f35962421c10b77384b4173ae77403d9d9e 100644
+--- a/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java
++++ b/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java
+@@ -214,6 +214,7 @@ public class PrimedTnt extends Entity {
+     @Override
+     public PrimedTnt clone(){
+         PrimedTnt neo = new PrimedTnt(this.level, this.getX(), this.getY(), this.getZ(), this.owner);
++        neo.setPos(this.position());
+         neo.setFuse(this.getFuse());
+         neo.setDeltaMovement(this.getDeltaMovement());
+         neo.setBoundingBox(this.getBoundingBox());
