@@ -14,4 +14,8 @@ Current Features:
 - Disable TNT Spread
 - TNT and FallingBlocks load chunks
 
+Missing some Features?
+Check out our Plugin:
+https://github.com/stanuwu/AtlasUtils
+
 Made by _Hermelijn15_ and _jesus_is_hot_, thanks to _Gromit_, _Suicidalkids_ and _bantuerfei_ for helping.
