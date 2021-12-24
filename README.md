@@ -13,6 +13,8 @@ Current Features:
 - Explode Lava
 - Disable TNT Spread
 - TNT and FallingBlocks load chunks
+- Explosion Proof Items
+- Unbreakable Block Breaker
 
 Missing some Features?
 Check out our Plugin:
