@@ -5,7 +5,7 @@ pluginManagement {
     }
 }
 
-rootProject.name = "Paper"
+rootProject.name = "AtlasSpigot"
 
 include("Paper-API", "Paper-Server", "Paper-MojangAPI")
 

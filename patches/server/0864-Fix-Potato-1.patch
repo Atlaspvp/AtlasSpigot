@@ -1,0 +1,62 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: stanvonderhtlwienwestlol <dusek.s03@htlwienwest.at>
+Date: Fri, 24 Dec 2021 09:23:07 +0100
+Subject: [PATCH] Fix Potato 1
+
+
+diff --git a/src/main/java/net/minecraft/world/level/block/Block.java b/src/main/java/net/minecraft/world/level/block/Block.java
+index bad94121c9e479c896de5716c1349713bfb522fe..555a174f8a4cd1b8b55d2f1a9aaae30cdec45c77 100644
+--- a/src/main/java/net/minecraft/world/level/block/Block.java
++++ b/src/main/java/net/minecraft/world/level/block/Block.java
+@@ -312,7 +312,7 @@ public class Block extends BlockBehaviour implements ItemLike {
+             Block.popResource((Level) worldserver, blockposition, itemstack);
+         });
+         state.spawnAfterBreak(worldserver, blockposition, ItemStack.EMPTY);
+-        BreakableUnbreakables.tryCleanup(pos);
++        BreakableUnbreakables.tryCleanup(blockposition);
+     }
+ 
+     public static void dropResources(BlockState state, Level world, BlockPos pos) {
+@@ -321,9 +321,8 @@ public class Block extends BlockBehaviour implements ItemLike {
+                 Block.popResource(world, pos, itemstack);
+             });
+             state.spawnAfterBreak((ServerLevel) world, pos, ItemStack.EMPTY);
+-            BreakableUnbreakables.tryCleanup(pos);
+         }
+-
++        BreakableUnbreakables.tryCleanup(pos);
+     }
+ 
+     public static void dropResources(BlockState state, LevelAccessor world, BlockPos pos, @Nullable BlockEntity blockEntity) {
+@@ -332,9 +331,8 @@ public class Block extends BlockBehaviour implements ItemLike {
+                 Block.popResource((Level) ((ServerLevel) world), pos, itemstack);
+             });
+             state.spawnAfterBreak((ServerLevel) world, pos, ItemStack.EMPTY);
+-            BreakableUnbreakables.tryCleanup(pos);
+         }
+-
++        BreakableUnbreakables.tryCleanup(pos);
+     }
+     // Paper start
+     public static boolean dropResources(BlockState state, LevelAccessor world, BlockPos pos, @Nullable BlockEntity blockEntity, BlockPos source) {
+@@ -349,8 +347,8 @@ public class Block extends BlockBehaviour implements ItemLike {
+                 popResource(world.getMinecraftWorld(), pos, org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(drop));
+             }
+             state.spawnAfterBreak(world.getMinecraftWorld(), pos, ItemStack.EMPTY);
+-            BreakableUnbreakables.tryCleanup(pos);
+         }
++        BreakableUnbreakables.tryCleanup(pos);
+         return true;
+     }
+     // Paper end
+@@ -361,9 +359,8 @@ public class Block extends BlockBehaviour implements ItemLike {
+                 Block.popResource(world, pos, itemstack1);
+             });
+             state.spawnAfterBreak((ServerLevel) world, pos, stack);
+-            BreakableUnbreakables.tryCleanup(pos);
+         }
+-
++        BreakableUnbreakables.tryCleanup(pos);
+     }
+ 
+     public static void popResource(Level world, BlockPos pos, ItemStack stack) {

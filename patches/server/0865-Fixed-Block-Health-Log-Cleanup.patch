@@ -1,0 +1,207 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: stanvonderhtlwienwestlol <dusek.s03@htlwienwest.at>
+Date: Fri, 24 Dec 2021 12:08:31 +0100
+Subject: [PATCH] Fixed Block Health Log Cleanup
+
+
+diff --git a/src/main/java/net/atlaspvp/AtlasConfig.java b/src/main/java/net/atlaspvp/AtlasConfig.java
+index 1628312e59dd00d45e77ebff9e3c83f58f0b92f4..02977f94fb2848e904957c6f0a74389c274620c7 100644
+--- a/src/main/java/net/atlaspvp/AtlasConfig.java
++++ b/src/main/java/net/atlaspvp/AtlasConfig.java
+@@ -256,15 +256,6 @@ public class AtlasConfig {
+         BlowableMaterials.init(getList("settings.patches.explosion-proof-items.items", defaultlist));
+     }
+ 
+-    public static boolean BreakableUnbreakables;
+-    private static void BreakableUnbreakables() {
+-        BreakableUnbreakables = getBoolean("settings.patches.breakable-unbreakables.enabled", false);
+-    }
+-
+-    public static boolean AllowCreeper;
+-    private static void AllowCreeper() {
+-        AllowCreeper = getBoolean("settings.patches.breakable-unbreakables.allow-creepers", false);
+-    }
+ 
+     public static String HealthCheckItem;
+     private static void HealthCheckItem() {
+@@ -282,4 +273,14 @@ public class AtlasConfig {
+         m.put("obsidian", 4);
+         BlockDurabilities = getStringIntMap("settings.patches.breakable-unbreakables.blocks", m);
+     }
++
++    public static boolean AllowCreeper;
++    private static void AllowCreeper() {
++        AllowCreeper = getBoolean("settings.patches.breakable-unbreakables.allow-creepers", false);
++    }
++
++    public static boolean BreakableUnbreakables;
++    private static void BreakableUnbreakables() {
++        BreakableUnbreakables = getBoolean("settings.patches.breakable-unbreakables.enabled", false);
++    }
+ }
+diff --git a/src/main/java/net/atlaspvp/BreakableUnbreakables.java b/src/main/java/net/atlaspvp/BreakableUnbreakables.java
+index 8a9a004c4deb077c8fb4b1d98f7a40ef80a9d4a8..b3c164758247b0ea78685ba966a3d17c137537d5 100644
+--- a/src/main/java/net/atlaspvp/BreakableUnbreakables.java
++++ b/src/main/java/net/atlaspvp/BreakableUnbreakables.java
+@@ -18,7 +18,7 @@ public class BreakableUnbreakables {
+     public static Map<String, Integer> ghealth = new HashMap<>();
+ 
+     public static boolean isBreakable(BlockPos b, Level l) {
+-        String spos = getSpos(b);
++        String spos = getSpos(b, l);
+         if (!ghealth.containsKey(spos)) {
+             String matx = l.getBlockState(b).getBukkitMaterial().name().toLowerCase();
+             if (AtlasConfig.BlockDurabilities.containsKey(matx)) {
+@@ -30,8 +30,8 @@ public class BreakableUnbreakables {
+         return true;
+     }
+ 
+-    public static boolean doDamage(BlockPos b) {
+-        String spos = getSpos(b);
++    public static boolean doDamage(BlockPos b, Level l) {
++        String spos = getSpos(b, l);
+         ghealth.put(spos, ghealth.get(spos)-1);
+         if (ghealth.get(spos) < 1) {
+             ghealth.remove(spos);
+@@ -40,31 +40,31 @@ public class BreakableUnbreakables {
+         return false;
+     }
+ 
+-    public static void tryCleanup(BlockPos b) {
+-        String spos = getSpos(b);
++    public static void tryCleanup(BlockPos b, Level l) {
++        String spos = getSpos(b, l);
+         if (ghealth.containsKey(spos)) {
+             ghealth.remove(spos);
+         }
+     }
+ 
+-    private static String getSpos(BlockPos b) {
+-        return (b.getX() + "|" + b.getY() + "|" + b.getZ());
++    private static String getSpos(BlockPos b, Level l) {
++        return (b.getX() + "|" + b.getY() + "|" + b.getZ()) + "|" + l.dimension().toString();
+     }
+ 
+ 
+-    public static String displayMessage(BlockPos b, Material m) {
++    public static String displayMessage(BlockPos b, Material m, Level l) {
+         int h = 1;
+         int mh = 1;
+-        if (ghealth.containsKey(getSpos(b))) {
+-            h = getHealth(b);
++        if (ghealth.containsKey(getSpos(b, l))) {
++            h = getHealth(b, l);
+             mh = getMaxHealth(m);
+         }
+         return AtlasConfig.HealthCheckMessage.replace('&', '§').replace("%health%", ""+h).replace("%max%", ""+mh);
+     }
+ 
+     //methods are unsafe, only use if you know the item exists
+-    public static int getHealth(BlockPos b) {
+-        String spos = getSpos(b);
++    public static int getHealth(BlockPos b, Level l) {
++        String spos = getSpos(b, l);
+         return ghealth.get(spos);
+     }
+ 
+diff --git a/src/main/java/net/minecraft/server/level/ServerLevel.java b/src/main/java/net/minecraft/server/level/ServerLevel.java
+index 80546463ff774a23a5e73d97460edc0df7591aa6..bb277b10acb462f4d04624940241c5e37e5422fe 100644
+--- a/src/main/java/net/minecraft/server/level/ServerLevel.java
++++ b/src/main/java/net/minecraft/server/level/ServerLevel.java
+@@ -36,6 +36,7 @@ import javax.annotation.Nonnull;
+ import javax.annotation.Nullable;
+ 
+ import net.atlaspvp.AtlasConfig;
++import net.atlaspvp.BreakableUnbreakables;
+ import net.minecraft.CrashReport;
+ import net.minecraft.core.BlockPos;
+ import net.minecraft.core.DefaultedRegistry;
+@@ -1549,6 +1550,9 @@ public class ServerLevel extends Level implements WorldGenLevel {
+ 
+     @Override
+     public void sendBlockUpdated(BlockPos pos, BlockState oldState, BlockState newState, int flags) {
++        if (oldState.getBukkitMaterial() != newState.getBukkitMaterial()) {
++            BreakableUnbreakables.tryCleanup(pos, getLevel());
++        }
+         this.getChunkSource().blockChanged(pos);
+         if(this.paperConfig.updatePathfindingOnBlockUpdate) { // Paper - option to disable pathfinding updates
+             VoxelShape voxelshape = oldState.getCollisionShape(this, pos);
+diff --git a/src/main/java/net/minecraft/world/item/ItemStack.java b/src/main/java/net/minecraft/world/item/ItemStack.java
+index 7ded40cfc2ed035cc4c48f0d0c809887724fa4c4..8a24a95c6cf41b664e8fc70f20d92fdabf95ebd6 100644
+--- a/src/main/java/net/minecraft/world/item/ItemStack.java
++++ b/src/main/java/net/minecraft/world/item/ItemStack.java
+@@ -322,7 +322,7 @@ public final class ItemStack {
+ 
+ 
+             if((this.getBukkitStack().getType().name().equalsIgnoreCase(AtlasConfig.HealthCheckItem)) && (BreakableUnbreakables.isBreakable(blockposition, world.getLevel()))) {
+-                entityhuman.getBukkitEntity().sendMessage(BreakableUnbreakables.displayMessage(blockposition, world.getBlockState(blockposition).getBukkitMaterial()));
++                entityhuman.getBukkitEntity().sendMessage(BreakableUnbreakables.displayMessage(blockposition, world.getBlockState(blockposition).getBukkitMaterial(), world.getLevel()));
+             }
+ 
+             if (!(this.getItem() instanceof BucketItem || this.getItem() instanceof SolidBucketItem)) { // if not bucket
+diff --git a/src/main/java/net/minecraft/world/level/Explosion.java b/src/main/java/net/minecraft/world/level/Explosion.java
+index 01c46febde65566cbcaeb30268797cd529e80889..8225269b26e8a820d6373cbbc27a5934369a8179 100644
+--- a/src/main/java/net/minecraft/world/level/Explosion.java
++++ b/src/main/java/net/minecraft/world/level/Explosion.java
+@@ -274,7 +274,7 @@ public class Explosion {
+                 }
+             }
+             unbreakables.forEach(b -> {
+-                if (BreakableUnbreakables.doDamage(b)) {
++                if (BreakableUnbreakables.doDamage(b, level)) {
+                     set.add(b);
+                 }
+             });
+diff --git a/src/main/java/net/minecraft/world/level/block/Block.java b/src/main/java/net/minecraft/world/level/block/Block.java
+index 555a174f8a4cd1b8b55d2f1a9aaae30cdec45c77..bb7836abe00369e432830562264a0ff90dc7a83f 100644
+--- a/src/main/java/net/minecraft/world/level/block/Block.java
++++ b/src/main/java/net/minecraft/world/level/block/Block.java
+@@ -66,6 +66,7 @@ import net.minecraft.world.phys.shapes.Shapes;
+ import net.minecraft.world.phys.shapes.VoxelShape;
+ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
++import org.bukkit.Bukkit;
+ 
+ public class Block extends BlockBehaviour implements ItemLike {
+ 
+@@ -312,7 +313,6 @@ public class Block extends BlockBehaviour implements ItemLike {
+             Block.popResource((Level) worldserver, blockposition, itemstack);
+         });
+         state.spawnAfterBreak(worldserver, blockposition, ItemStack.EMPTY);
+-        BreakableUnbreakables.tryCleanup(blockposition);
+     }
+ 
+     public static void dropResources(BlockState state, Level world, BlockPos pos) {
+@@ -322,7 +322,7 @@ public class Block extends BlockBehaviour implements ItemLike {
+             });
+             state.spawnAfterBreak((ServerLevel) world, pos, ItemStack.EMPTY);
+         }
+-        BreakableUnbreakables.tryCleanup(pos);
++        BreakableUnbreakables.tryCleanup(pos, world);
+     }
+ 
+     public static void dropResources(BlockState state, LevelAccessor world, BlockPos pos, @Nullable BlockEntity blockEntity) {
+@@ -332,7 +332,6 @@ public class Block extends BlockBehaviour implements ItemLike {
+             });
+             state.spawnAfterBreak((ServerLevel) world, pos, ItemStack.EMPTY);
+         }
+-        BreakableUnbreakables.tryCleanup(pos);
+     }
+     // Paper start
+     public static boolean dropResources(BlockState state, LevelAccessor world, BlockPos pos, @Nullable BlockEntity blockEntity, BlockPos source) {
+@@ -348,7 +347,6 @@ public class Block extends BlockBehaviour implements ItemLike {
+             }
+             state.spawnAfterBreak(world.getMinecraftWorld(), pos, ItemStack.EMPTY);
+         }
+-        BreakableUnbreakables.tryCleanup(pos);
+         return true;
+     }
+     // Paper end
+@@ -360,7 +358,6 @@ public class Block extends BlockBehaviour implements ItemLike {
+             });
+             state.spawnAfterBreak((ServerLevel) world, pos, stack);
+         }
+-        BreakableUnbreakables.tryCleanup(pos);
+     }
+ 
+     public static void popResource(Level world, BlockPos pos, ItemStack stack) {
