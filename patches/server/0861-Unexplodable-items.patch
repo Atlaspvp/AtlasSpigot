@@ -1,0 +1,116 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: BuildTools <unconfigured@null.spigotmc.org>
+Date: Fri, 24 Dec 2021 01:10:23 +0100
+Subject: [PATCH] Unexplodable items
+
+
+diff --git a/src/main/java/net/atlaspvp/AtlasConfig.java b/src/main/java/net/atlaspvp/AtlasConfig.java
+index c0a3a5af8b1f42498028eb228cfc2ccb220572c9..2b6e0b1fb93a45a3727e427a3df0aab7477eec13 100644
+--- a/src/main/java/net/atlaspvp/AtlasConfig.java
++++ b/src/main/java/net/atlaspvp/AtlasConfig.java
+@@ -14,6 +14,7 @@ import java.lang.reflect.InvocationTargetException;
+ import java.lang.reflect.Method;
+ import java.lang.reflect.Modifier;
+ import java.nio.charset.StandardCharsets;
++import java.util.ArrayList;
+ import java.util.HashMap;
+ import java.util.List;
+ import java.util.Map;
+@@ -25,15 +26,15 @@ import com.google.common.collect.Lists;
+ import net.minecraft.server.MinecraftServer;
+ import org.bukkit.Bukkit;
+ import org.bukkit.ChatColor;
++import org.bukkit.Material;
+ import org.bukkit.command.Command;
+ import org.bukkit.configuration.ConfigurationSection;
+ import org.bukkit.configuration.InvalidConfigurationException;
+ import org.bukkit.configuration.file.YamlConfiguration;
+-import co.aikar.timings.Timings;
+-import co.aikar.timings.TimingsManager;
+ import org.spigotmc.SpigotConfig;
+ import org.spigotmc.WatchdogThread;
+ 
++import net.atlaspvp.BlowableMaterials;
+ public class AtlasConfig {
+     private static File CONFIG_FILE;
+     private static final String HEADER = "Change AtlasSpigot settings here:\n";
+@@ -232,4 +233,18 @@ public class AtlasConfig {
+     private static void LoadCHunksForTicks() {
+         LoadChunksForTicks = getInt("settings.chunks.load-chunks-for-ticks", 2);
+     }
++
++    public static boolean ExplosionProofItems;
++    private static void ExplosionProofItems() {
++        ExplosionProofItems = getBoolean("settings.patches.explosion-proof-items", false);
++    }
++
++    public static List<String> DontBlowList;
++    private static void DontBlowList() {
++        List<String> defaultlist = new ArrayList<>();
++        defaultlist.add("spawner");
++        DontBlowList = getList("settings.patches.dont-blow-list", defaultlist);
++        BlowableMaterials.init();
++    }
++
+ }
+diff --git a/src/main/java/net/atlaspvp/BlowableMaterials.java b/src/main/java/net/atlaspvp/BlowableMaterials.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..ac23b7c8543278c59dd6a562ae98c70c64a479fd
+--- /dev/null
++++ b/src/main/java/net/atlaspvp/BlowableMaterials.java
+@@ -0,0 +1,18 @@
++package net.atlaspvp;
++
++import org.bukkit.Material;
++
++import java.util.ArrayList;
++import java.util.List;
++import java.util.Objects;
++
++public class BlowableMaterials {
++    public static List<Material> blowableList = new ArrayList<>();
++
++    public static void init() {
++        blowableList.clear();
++        blowableList = AtlasConfig.DontBlowList.stream().filter(m -> !Objects.equals(m, "*")).map(m -> org.bukkit.Material.valueOf(m.toUpperCase())).toList();
++    }
++
++
++}
+diff --git a/src/main/java/net/minecraft/world/level/Explosion.java b/src/main/java/net/minecraft/world/level/Explosion.java
+index 6d0103fabf859db017678ab57d9dccc2487e06a3..4ad67b252fc09c024649a4a281f90906faa80483 100644
+--- a/src/main/java/net/minecraft/world/level/Explosion.java
++++ b/src/main/java/net/minecraft/world/level/Explosion.java
+@@ -17,6 +17,7 @@ import java.util.Set;
+ import javax.annotation.Nullable;
+ 
+ import net.atlaspvp.AtlasConfig;
++import net.atlaspvp.BlowableMaterials;
+ import net.minecraft.core.BlockPos;
+ import net.minecraft.core.Direction;
+ import net.minecraft.core.Vec3i;
+@@ -279,8 +280,23 @@ public class Explosion {
+ 
+         for (int l1 = 0; l1 < list.size(); ++l1) {
+             Entity entity = (Entity) list.get(l1);
++            Boolean itemblowup = true;
++
++            if (AtlasConfig.ExplosionProofItems && entity instanceof ItemEntity && !AtlasConfig.DontBlowList.isEmpty()) {
++                if (AtlasConfig.DontBlowList.contains("*")){
++                    itemblowup = false;
++                } else{
++                    ItemStack item = ((ItemEntity) entity).getItem();
++                    org.bukkit.Material bukkitmaterial =  item.getBukkitStack().getType();
++                    List<org.bukkit.Material> bukkitlist = BlowableMaterials.blowableList;
++
++                    if (bukkitlist.contains(bukkitmaterial)) {
++                        itemblowup = false;
++                    }
++                }
++            }
+ 
+-            if (!entity.ignoreExplosion()) {
++            if (!entity.ignoreExplosion() && itemblowup) {
+                 double d7 = Math.sqrt(entity.distanceToSqr(vec3d)) / (double) f2;
+ 
+                 if (d7 <= 1.0D) {
