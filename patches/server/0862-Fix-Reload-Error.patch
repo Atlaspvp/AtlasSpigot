@@ -1,0 +1,56 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: stanvonderhtlwienwestlol <dusek.s03@htlwienwest.at>
+Date: Fri, 24 Dec 2021 03:02:35 +0100
+Subject: [PATCH] Fix Reload Error
+
+
+diff --git a/src/main/java/net/atlaspvp/AtlasConfig.java b/src/main/java/net/atlaspvp/AtlasConfig.java
+index 2b6e0b1fb93a45a3727e427a3df0aab7477eec13..444c83231b4dede0c6f49de739bf92c05e0b6d59 100644
+--- a/src/main/java/net/atlaspvp/AtlasConfig.java
++++ b/src/main/java/net/atlaspvp/AtlasConfig.java
+@@ -236,15 +236,14 @@ public class AtlasConfig {
+ 
+     public static boolean ExplosionProofItems;
+     private static void ExplosionProofItems() {
+-        ExplosionProofItems = getBoolean("settings.patches.explosion-proof-items", false);
++        ExplosionProofItems = getBoolean("settings.patches.explosion-proof-items.enabled", false);
+     }
+ 
+     public static List<String> DontBlowList;
+     private static void DontBlowList() {
+         List<String> defaultlist = new ArrayList<>();
+         defaultlist.add("spawner");
+-        DontBlowList = getList("settings.patches.dont-blow-list", defaultlist);
+-        BlowableMaterials.init();
++        BlowableMaterials.init(getList("settings.patches.explosion-proof-items.items", defaultlist));
+     }
+ 
+ }
+diff --git a/src/main/java/net/atlaspvp/BlowableMaterials.java b/src/main/java/net/atlaspvp/BlowableMaterials.java
+index ac23b7c8543278c59dd6a562ae98c70c64a479fd..f8404c0ea777741346d4535f89a0db8437527365 100644
+--- a/src/main/java/net/atlaspvp/BlowableMaterials.java
++++ b/src/main/java/net/atlaspvp/BlowableMaterials.java
+@@ -1,5 +1,6 @@
+ package net.atlaspvp;
+ 
++import com.destroystokyo.paper.MaterialTags;
+ import org.bukkit.Material;
+ 
+ import java.util.ArrayList;
+@@ -9,10 +10,12 @@ import java.util.Objects;
+ public class BlowableMaterials {
+     public static List<Material> blowableList = new ArrayList<>();
+ 
+-    public static void init() {
++    public static void init(List<String> l) {
+         blowableList.clear();
+-        blowableList = AtlasConfig.DontBlowList.stream().filter(m -> !Objects.equals(m, "*")).map(m -> org.bukkit.Material.valueOf(m.toUpperCase())).toList();
++        l.forEach(m -> {
++            blowableList.add(Material.matchMaterial(m));
++        });
++        if (AtlasConfig.DontBlowList != null) AtlasConfig.DontBlowList.clear();
++        AtlasConfig.DontBlowList = l;
+     }
+-
+-
+ }
