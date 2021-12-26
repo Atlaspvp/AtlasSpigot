@@ -1,0 +1,67 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: stanvonderhtlwienwestlol <dusek.s03@htlwienwest.at>
+Date: Sun, 26 Dec 2021 15:23:19 +0100
+Subject: [PATCH] More Performance Improvements
+
+
+diff --git a/src/main/java/net/atlaspvp/AtlasConfig.java b/src/main/java/net/atlaspvp/AtlasConfig.java
+index 02977f94fb2848e904957c6f0a74389c274620c7..c6ccb9b039c3ccc81e420cf98f1e692b9f0232da 100644
+--- a/src/main/java/net/atlaspvp/AtlasConfig.java
++++ b/src/main/java/net/atlaspvp/AtlasConfig.java
+@@ -283,4 +283,9 @@ public class AtlasConfig {
+     private static void BreakableUnbreakables() {
+         BreakableUnbreakables = getBoolean("settings.patches.breakable-unbreakables.enabled", false);
+     }
++
++    public static boolean CacheExplosionBlockDensity;
++    private static void CacheExplosionBlockDensity() {
++        CacheExplosionBlockDensity = getBoolean("settings.cannons.cache-explosion-block-density", true);
++    }
+ }
+diff --git a/src/main/java/net/minecraft/world/level/Explosion.java b/src/main/java/net/minecraft/world/level/Explosion.java
+index 5c6613a8b26246b6d6a76f99e29f8dd2c307b669..22feb391fd814ae98103ba1bc5ee5f0bada39227 100644
+--- a/src/main/java/net/minecraft/world/level/Explosion.java
++++ b/src/main/java/net/minecraft/world/level/Explosion.java
+@@ -49,7 +49,6 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
+ import net.minecraft.world.phys.AABB;
+ import net.minecraft.world.phys.HitResult;
+ import net.minecraft.world.phys.Vec3;
+-import org.bukkit.Material;
+ import org.bukkit.block.data.Waterlogged;
+ import org.bukkit.craftbukkit.event.CraftEventFactory;
+ import org.bukkit.event.entity.EntityExplodeEvent;
+@@ -171,8 +170,10 @@ public class Explosion {
+         }
+         boolean firstloop = false;
+         Optional<Float> cachedOptional = Optional.empty();
+-        Set<BlockPos> unbreakables = Sets.newHashSet();
+         Set<Long> ccU = Sets.newHashSet();
++        Map<Long, BlockState> blockstateCache = new HashMap<>();
++        Map<Long, FluidState> fluidstateCache = new HashMap<>();
++        Map<Long, Float> explosionResistanceCache = new HashMap<>();
+         if(!inWater) {
+             for (int k = 0; k < 16; ++k) {
+                 for (i = 0; i < 16; ++i) {
+@@ -249,7 +250,9 @@ public class Explosion {
+                                         if (!ccU.contains(blockposition.asLong())) {
+                                             skip = level.obB.isBreakable(blockposition, iblockdata);
+                                             if (skip) {
+-                                                unbreakables.add(blockposition);
++                                                if (level.obB.doDamage(blockposition)) {
++                                                    set.add(blockposition);
++                                                }
+                                             }
+                                             ccU.add(blockposition.asLong());
+                                         }
+@@ -279,11 +282,6 @@ public class Explosion {
+                     }
+                 }
+             }
+-            unbreakables.forEach(b -> {
+-                if (level.obB.doDamage(b)) {
+-                    set.add(b);
+-                }
+-            });
+         }
+ 
+         this.toBlow.addAll(set);

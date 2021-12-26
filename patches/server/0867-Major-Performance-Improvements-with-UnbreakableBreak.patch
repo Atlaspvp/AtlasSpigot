@@ -1,0 +1,225 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: stanvonderhtlwienwestlol <dusek.s03@htlwienwest.at>
+Date: Sun, 26 Dec 2021 14:38:16 +0100
+Subject: [PATCH] Major Performance Improvements with UnbreakableBreaker
+
+
+diff --git a/src/main/java/net/atlaspvp/BreakableUnbreakables.java b/src/main/java/net/atlaspvp/BreakableUnbreakables.java
+index b3c164758247b0ea78685ba966a3d17c137537d5..bde34a710d804639a7f5798efd78c596a611366a 100644
+--- a/src/main/java/net/atlaspvp/BreakableUnbreakables.java
++++ b/src/main/java/net/atlaspvp/BreakableUnbreakables.java
+@@ -2,9 +2,11 @@ package net.atlaspvp;
+ 
+ import com.mojang.math.Vector3f;
+ import net.minecraft.core.BlockPos;
++import net.minecraft.core.Registry;
+ import net.minecraft.core.Vec3i;
+ import net.minecraft.world.level.Level;
+ import net.minecraft.world.level.block.Block;
++import net.minecraft.world.level.block.state.BlockState;
+ import net.minecraft.world.phys.Vec3;
+ import org.bukkit.Bukkit;
+ import org.bukkit.Material;
+@@ -15,12 +17,16 @@ import java.util.Locale;
+ import java.util.Map;
+ 
+ public class BreakableUnbreakables {
+-    public static Map<String, Integer> ghealth = new HashMap<>();
++    public Map<Long, Integer> ghealth;
+ 
+-    public static boolean isBreakable(BlockPos b, Level l) {
+-        String spos = getSpos(b, l);
++    public BreakableUnbreakables() {
++        this.ghealth = new HashMap<>();
++    }
++
++    public boolean isBreakable(BlockPos b, BlockState bs) {
++        Long spos = getSpos(b);
+         if (!ghealth.containsKey(spos)) {
+-            String matx = l.getBlockState(b).getBukkitMaterial().name().toLowerCase();
++            String matx = Registry.BLOCK.getKey(bs.getBlock()).getPath();
+             if (AtlasConfig.BlockDurabilities.containsKey(matx)) {
+                 ghealth.put(spos, AtlasConfig.BlockDurabilities.get(matx));
+             } else {
+@@ -30,8 +36,8 @@ public class BreakableUnbreakables {
+         return true;
+     }
+ 
+-    public static boolean doDamage(BlockPos b, Level l) {
+-        String spos = getSpos(b, l);
++    public boolean doDamage(BlockPos b) {
++        Long spos = getSpos(b);
+         ghealth.put(spos, ghealth.get(spos)-1);
+         if (ghealth.get(spos) < 1) {
+             ghealth.remove(spos);
+@@ -40,35 +46,35 @@ public class BreakableUnbreakables {
+         return false;
+     }
+ 
+-    public static void tryCleanup(BlockPos b, Level l) {
+-        String spos = getSpos(b, l);
++    public void tryCleanup(BlockPos b) {
++        Long spos = getSpos(b);
+         if (ghealth.containsKey(spos)) {
+             ghealth.remove(spos);
+         }
+     }
+ 
+-    private static String getSpos(BlockPos b, Level l) {
+-        return (b.getX() + "|" + b.getY() + "|" + b.getZ()) + "|" + l.dimension().toString();
++    private Long getSpos(BlockPos b) {
++        return b.asLong();
+     }
+ 
+ 
+-    public static String displayMessage(BlockPos b, Material m, Level l) {
++    public String displayMessage(BlockPos b, Material m, Level l) {
+         int h = 1;
+         int mh = 1;
+-        if (ghealth.containsKey(getSpos(b, l))) {
+-            h = getHealth(b, l);
++        if (ghealth.containsKey(getSpos(b))) {
++            h = getHealth(b);
+             mh = getMaxHealth(m);
+         }
+         return AtlasConfig.HealthCheckMessage.replace('&', '§').replace("%health%", ""+h).replace("%max%", ""+mh);
+     }
+ 
+     //methods are unsafe, only use if you know the item exists
+-    public static int getHealth(BlockPos b, Level l) {
+-        String spos = getSpos(b, l);
++    public int getHealth(BlockPos b) {
++        Long spos = getSpos(b);
+         return ghealth.get(spos);
+     }
+ 
+-    public static int getMaxHealth(Material m) {
++    public int getMaxHealth(Material m) {
+         String matx = m.name().toLowerCase();
+         return AtlasConfig.BlockDurabilities.get(matx);
+     }
+diff --git a/src/main/java/net/minecraft/server/level/ServerLevel.java b/src/main/java/net/minecraft/server/level/ServerLevel.java
+index bb277b10acb462f4d04624940241c5e37e5422fe..80a676ec1adfdf231cc1a179ee25c5513938d64d 100644
+--- a/src/main/java/net/minecraft/server/level/ServerLevel.java
++++ b/src/main/java/net/minecraft/server/level/ServerLevel.java
+@@ -1551,7 +1551,7 @@ public class ServerLevel extends Level implements WorldGenLevel {
+     @Override
+     public void sendBlockUpdated(BlockPos pos, BlockState oldState, BlockState newState, int flags) {
+         if (oldState.getBukkitMaterial() != newState.getBukkitMaterial()) {
+-            BreakableUnbreakables.tryCleanup(pos, getLevel());
++            getLevel().obB.tryCleanup(pos);
+         }
+         this.getChunkSource().blockChanged(pos);
+         if(this.paperConfig.updatePathfindingOnBlockUpdate) { // Paper - option to disable pathfinding updates
+diff --git a/src/main/java/net/minecraft/world/item/ItemStack.java b/src/main/java/net/minecraft/world/item/ItemStack.java
+index 8a24a95c6cf41b664e8fc70f20d92fdabf95ebd6..306bc5cc82b199a194287cb2d59c12d22f5df748 100644
+--- a/src/main/java/net/minecraft/world/item/ItemStack.java
++++ b/src/main/java/net/minecraft/world/item/ItemStack.java
+@@ -321,8 +321,8 @@ public final class ItemStack {
+             ServerLevel world = (ServerLevel) itemactioncontext.getLevel();
+ 
+ 
+-            if((this.getBukkitStack().getType().name().equalsIgnoreCase(AtlasConfig.HealthCheckItem)) && (BreakableUnbreakables.isBreakable(blockposition, world.getLevel()))) {
+-                entityhuman.getBukkitEntity().sendMessage(BreakableUnbreakables.displayMessage(blockposition, world.getBlockState(blockposition).getBukkitMaterial(), world.getLevel()));
++            if((this.getBukkitStack().getType().name().equalsIgnoreCase(AtlasConfig.HealthCheckItem)) && ( world.obB.isBreakable(blockposition, world.getBlockState(blockposition)))) {
++                entityhuman.getBukkitEntity().sendMessage(world.obB.displayMessage(blockposition, world.getBlockState(blockposition).getBukkitMaterial(), world.getLevel()));
+             }
+ 
+             if (!(this.getItem() instanceof BucketItem || this.getItem() instanceof SolidBucketItem)) { // if not bucket
+diff --git a/src/main/java/net/minecraft/world/level/Explosion.java b/src/main/java/net/minecraft/world/level/Explosion.java
+index 8225269b26e8a820d6373cbbc27a5934369a8179..5c6613a8b26246b6d6a76f99e29f8dd2c307b669 100644
+--- a/src/main/java/net/minecraft/world/level/Explosion.java
++++ b/src/main/java/net/minecraft/world/level/Explosion.java
+@@ -49,6 +49,7 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
+ import net.minecraft.world.phys.AABB;
+ import net.minecraft.world.phys.HitResult;
+ import net.minecraft.world.phys.Vec3;
++import org.bukkit.Material;
+ import org.bukkit.block.data.Waterlogged;
+ import org.bukkit.craftbukkit.event.CraftEventFactory;
+ import org.bukkit.event.entity.EntityExplodeEvent;
+@@ -170,7 +171,8 @@ public class Explosion {
+         }
+         boolean firstloop = false;
+         Optional<Float> cachedOptional = Optional.empty();
+-        Set<BlockPos>  unbreakables = Sets.newHashSet();
++        Set<BlockPos> unbreakables = Sets.newHashSet();
++        Set<Long> ccU = Sets.newHashSet();
+         if(!inWater) {
+             for (int k = 0; k < 16; ++k) {
+                 for (i = 0; i < 16; ++i) {
+@@ -242,14 +244,18 @@ public class Explosion {
+                                 }
+ 
+                                 boolean skip = false;
+-                                if (AtlasConfig.BreakableUnbreakables) {
++                                if (AtlasConfig.BreakableUnbreakables && !iblockdata.isAir()) {
+                                     if (this.source instanceof PrimedTnt || (AtlasConfig.AllowCreeper && this.source instanceof Creeper)) {
+-                                        skip = BreakableUnbreakables.isBreakable(blockposition, level);
+-                                        if (skip) {
+-                                            unbreakables.add(blockposition);
++                                        if (!ccU.contains(blockposition.asLong())) {
++                                            skip = level.obB.isBreakable(blockposition, iblockdata);
++                                            if (skip) {
++                                                unbreakables.add(blockposition);
++                                            }
++                                            ccU.add(blockposition.asLong());
+                                         }
+                                     }
+                                 }
++
+                                 if (!skip) {
+                                     if (f > 0.0F && this.damageCalculator.shouldBlockExplode(this, this.level, blockposition, iblockdata, f)) {
+                                         set.add(blockposition);
+@@ -274,7 +280,7 @@ public class Explosion {
+                 }
+             }
+             unbreakables.forEach(b -> {
+-                if (BreakableUnbreakables.doDamage(b, level)) {
++                if (level.obB.doDamage(b)) {
+                     set.add(b);
+                 }
+             });
+diff --git a/src/main/java/net/minecraft/world/level/Level.java b/src/main/java/net/minecraft/world/level/Level.java
+index 3a0238e4edaf989391a1f015f1dbf89c125973b1..a12e3881fc119ff691f88d379b67711a8a493661 100644
+--- a/src/main/java/net/minecraft/world/level/Level.java
++++ b/src/main/java/net/minecraft/world/level/Level.java
+@@ -16,6 +16,8 @@ import java.util.function.Consumer;
+ import java.util.function.Predicate;
+ import java.util.function.Supplier;
+ import javax.annotation.Nullable;
++
++import net.atlaspvp.BreakableUnbreakables;
+ import net.minecraft.CrashReport;
+ import net.minecraft.CrashReportCategory;
+ import net.minecraft.ReportedException;
+@@ -178,6 +180,8 @@ public abstract class Level implements LevelAccessor, AutoCloseable {
+     public final Map<Explosion.CacheKey, Float> explosionDensityCache = new HashMap<>(); // Paper - Optimize explosions
+     public java.util.ArrayDeque<net.minecraft.world.level.block.RedstoneTorchBlock.Toggle> redstoneUpdateInfos; // Paper - Move from Map in BlockRedstoneTorch to here
+ 
++    public BreakableUnbreakables obB;
++
+     // Paper start - fix and optimise world upgrading
+     // copied from below
+     public static ResourceKey<DimensionType> getDimensionKey(DimensionType manager) {
+@@ -314,6 +318,7 @@ public abstract class Level implements LevelAccessor, AutoCloseable {
+     // Paper end - optimise checkDespawn
+ 
+     protected Level(WritableLevelData worlddatamutable, ResourceKey<Level> resourcekey, final DimensionType dimensionmanager, Supplier<ProfilerFiller> supplier, boolean flag, boolean flag1, long i, org.bukkit.generator.ChunkGenerator gen, org.bukkit.generator.BiomeProvider biomeProvider, org.bukkit.World.Environment env, java.util.concurrent.Executor executor) { // Paper - Anti-Xray - Pass executor
++        this.obB = new BreakableUnbreakables();
+         this.spigotConfig = new org.spigotmc.SpigotWorldConfig(((net.minecraft.world.level.storage.PrimaryLevelData) worlddatamutable).getLevelName()); // Spigot
+         this.paperConfig = new com.destroystokyo.paper.PaperWorldConfig(((net.minecraft.world.level.storage.PrimaryLevelData) worlddatamutable).getLevelName(), this.spigotConfig); // Paper
+         this.atlasConfig = new net.atlaspvp.AtlasWorldConfig(((net.minecraft.world.level.storage.PrimaryLevelData) worlddatamutable).getLevelName(), this.spigotConfig); // Atlas
+diff --git a/src/main/java/net/minecraft/world/level/block/Block.java b/src/main/java/net/minecraft/world/level/block/Block.java
+index bb7836abe00369e432830562264a0ff90dc7a83f..d983d8093283c6b54df463c3c1ea15f78bcea450 100644
+--- a/src/main/java/net/minecraft/world/level/block/Block.java
++++ b/src/main/java/net/minecraft/world/level/block/Block.java
+@@ -322,7 +322,7 @@ public class Block extends BlockBehaviour implements ItemLike {
+             });
+             state.spawnAfterBreak((ServerLevel) world, pos, ItemStack.EMPTY);
+         }
+-        BreakableUnbreakables.tryCleanup(pos, world);
++        world.obB.tryCleanup(pos);
+     }
+ 
+     public static void dropResources(BlockState state, LevelAccessor world, BlockPos pos, @Nullable BlockEntity blockEntity) {
