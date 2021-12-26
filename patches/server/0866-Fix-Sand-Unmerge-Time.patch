@@ -1,0 +1,40 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: stanvonderhtlwienwestlol <dusek.s03@htlwienwest.at>
+Date: Sun, 26 Dec 2021 11:49:31 +0100
+Subject: [PATCH] Fix Sand Unmerge Time
+
+
+diff --git a/src/main/java/net/minecraft/world/entity/item/FallingBlockEntity.java b/src/main/java/net/minecraft/world/entity/item/FallingBlockEntity.java
+index 443c138c2dfa467879e90f68f9297c4812edf6e5..f421760b0800be8a4a7858240c8acebbc31942c1 100644
+--- a/src/main/java/net/minecraft/world/entity/item/FallingBlockEntity.java
++++ b/src/main/java/net/minecraft/world/entity/item/FallingBlockEntity.java
+@@ -190,14 +190,6 @@ public class FallingBlockEntity extends Entity {
+                         this.discard();
+                     }
+                 } else {
+-                    //jesus modification - unmerge
+-                    if (this.count > 1) {
+-                        for (int i = 0; i < this.count-1; i++) {
+-                            bfb.clone().tick();
+-                        }
+-                    }
+-                    bfb.discard();
+-
+                     BlockState iblockdata = this.level.getBlockState(blockposition);
+ 
+                     this.setDeltaMovement(this.getDeltaMovement().multiply(0.7D, -0.5D, 0.7D));
+@@ -266,6 +258,14 @@ public class FallingBlockEntity extends Entity {
+                             this.discard();
+                             this.callOnBrokenAfterFall(block, blockposition);
+                         }
++
++                        //jesus modification - unmerge
++                        if (this.count > 1) {
++                            for (int i = 0; i < this.count-1; i++) {
++                                bfb.clone().tick();
++                            }
++                        }
++                        bfb.discard();
+                     }
+                 }
+             }
