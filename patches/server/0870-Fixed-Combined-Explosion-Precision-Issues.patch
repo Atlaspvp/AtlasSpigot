@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: stanvonderhtlwienwestlol <dusek.s03@htlwienwest.at>
+Date: Wed, 29 Dec 2021 02:27:12 +0100
+Subject: [PATCH] Fixed Combined Explosion Precision Issues
+
+
+diff --git a/src/main/java/net/minecraft/world/level/Explosion.java b/src/main/java/net/minecraft/world/level/Explosion.java
+index 42c32e99c1acb4efec8de3ec558c652ec31d769c..b06d798d75c38b6e79a191852bb0ab8a88fc77cd 100644
+--- a/src/main/java/net/minecraft/world/level/Explosion.java
++++ b/src/main/java/net/minecraft/world/level/Explosion.java
+@@ -350,7 +350,13 @@ public class Explosion {
+                             d14 = entity instanceof Player && level.paperConfig.disableExplosionKnockback ? 0 : ProtectionEnchantment.getExplosionKnockbackAfterDampener((LivingEntity) entity, d13); // Paper - Disable explosion knockback
+                         }
+ 
+-                        entity.setDeltaMovement(entity.getDeltaMovement().add(d8 * d14 * merged, d9 * d14 * merged, d10 * d14 * merged));
++                        double tax = 0, tay = 0, taz = 0;
++                        for (int k = 0; k < merged; k++) {
++                            tax += d8 * d14;
++                            tay += d9 * d14;
++                            taz += d10 * d14;
++                        }
++                        entity.setDeltaMovement(entity.getDeltaMovement().add(tax, tay, taz));
+                         if (entity instanceof Player) {
+                             Player entityhuman = (Player) entity;
+ 
