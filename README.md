@@ -7,6 +7,7 @@ Currently makes collision about 2 times faster and explosions in water about 3-4
 Current Features:
 - Configureable
 - Entity Merging (TNT and FallingBlock)
+- Combined Explosions
 - Explosion Water Check
 - Other Optimisations
 - Explode Waterlogged Blocks
