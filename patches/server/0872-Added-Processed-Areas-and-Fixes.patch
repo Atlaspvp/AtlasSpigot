@@ -1,0 +1,156 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: stanvonderhtlwienwestlol <dusek.s03@htlwienwest.at>
+Date: Tue, 4 Jan 2022 18:03:11 +0100
+Subject: [PATCH] Added Processed Areas and Fixes
+
+
+diff --git a/src/main/java/net/atlaspvp/AtlasConfig.java b/src/main/java/net/atlaspvp/AtlasConfig.java
+index a2f13f63085e37ec4705cef1a198780a57f2ec7b..42c4cc67f998ad2aebdf702362c631f18bdc4997 100644
+--- a/src/main/java/net/atlaspvp/AtlasConfig.java
++++ b/src/main/java/net/atlaspvp/AtlasConfig.java
+@@ -303,4 +303,9 @@ public class AtlasConfig {
+     private static void InstantMergeRange() {
+         InstantMergeRange = getInt("settings.cannons.instant-merge-range", 5);
+     }
++
++    public static boolean ProcessedAreas;
++    private static void ProcessedAreas() {
++        ProcessedAreas = getBoolean("settings.cannons.raycast-skip-processed-areas", true);
++    }
+ }
+diff --git a/src/main/java/net/atlaspvp/ColumnSpawning.java b/src/main/java/net/atlaspvp/ColumnSpawning.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..d5155a2a964d435c8d4520135e51ee3004f7bce7
+--- /dev/null
++++ b/src/main/java/net/atlaspvp/ColumnSpawning.java
+@@ -0,0 +1,39 @@
++package net.atlaspvp;
++
++import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
++import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
++import net.minecraft.sounds.SoundEvents;
++import net.minecraft.sounds.SoundSource;
++import net.minecraft.world.entity.Entity;
++import net.minecraft.world.entity.player.Player;
++
++import java.util.ArrayDeque;
++import java.util.Queue;
++
++public class ColumnSpawning {
++
++    private final Long2ObjectMap<Queue<Entity>> queuedSpawns = new Long2ObjectOpenHashMap<>();
++
++    public void queueSpawn(Entity entity) {
++        int floorX = entity.getBlockX();
++        int floorZ = entity.getBlockZ();
++        long key = (((long) floorX) << 32) | (floorZ & 0xffffffffL);
++
++        Queue<Entity> queue = queuedSpawns.get(key);
++        if (queue == null) {
++            queue = new ArrayDeque<>();
++            queuedSpawns.put(key, queue);
++        }
++        queue.add(entity);
++    }
++
++    public void dispatch() {
++        for (Queue<Entity> queue : queuedSpawns.values()) {
++            for (Entity entity; (entity = queue.poll()) != null; ) {
++                entity.level.addFreshEntity(entity);
++                entity.level.playSound((Player) null, entity.xo, entity.yo, entity.zo, SoundEvents.TNT_PRIMED, SoundSource.BLOCKS, 1.0F, 1.0F);
++            }
++        }
++        queuedSpawns.clear();
++    }
++}
+diff --git a/src/main/java/net/minecraft/world/level/Explosion.java b/src/main/java/net/minecraft/world/level/Explosion.java
+index da27968dcee43b4379e7826d592c576ba81f7510..510af8a0e5b682cff48e2378dcfad1ebe569c567 100644
+--- a/src/main/java/net/minecraft/world/level/Explosion.java
++++ b/src/main/java/net/minecraft/world/level/Explosion.java
+@@ -76,6 +76,28 @@ public class Explosion {
+     private final Map<Player, Vec3> hitPlayers;
+     public boolean wasCanceled = false; // CraftBukkit - add field
+ 
++    // big thanks to Samsuik / SuicidalKids for this code
++    private final it.unimi.dsi.fastutil.longs.Long2ObjectMap<DensityData> block2DensityMap = new it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap<>();
++    private static class DensityData {
++        public AABB box;
++        public float density;
++
++        public DensityData(AABB box, float density) {
++            this.box = box;
++            this.density = density;
++        }
++
++        public boolean isIntersecting(AABB with) {
++            return (box.minX <= with.minX && box.maxX >= with.minX || box.minX <= with.maxX && box.maxX >= with.maxX)
++                && (box.minY <= with.minY && box.maxY >= with.minY || box.minY <= with.maxY && box.maxY >= with.maxY)
++                && (box.minZ <= with.minZ && box.maxZ >= with.minZ || box.minZ <= with.maxZ && box.maxZ >= with.maxZ);
++        }
++
++        public void expand(AABB another) {
++            box = box.minmax(another);
++        }
++    }
++
+     public Explosion(Level world, @Nullable Entity entity, double x, double y, double z, float power) {
+         this(world, entity, x, y, z, power, false, Explosion.BlockInteraction.DESTROY);
+     }
+@@ -113,7 +135,7 @@ public class Explosion {
+         return (ExplosionDamageCalculator) (entity == null ? Explosion.EXPLOSION_DAMAGE_CALCULATOR : new EntityBasedExplosionDamageCalculator(entity));
+     }
+ 
+-    public static float getSeenPercent(Vec3 source, Entity entity) {
++    public float getSeenPercent(Vec3 source, Entity entity) {
+         AABB axisalignedbb = entity.getBoundingBox();
+         double d0 = 1.0D / ((axisalignedbb.maxX - axisalignedbb.minX) * 2.0D + 1.0D);
+         double d1 = 1.0D / ((axisalignedbb.maxY - axisalignedbb.minY) * 2.0D + 1.0D);
+@@ -124,6 +146,8 @@ public class Explosion {
+         if (d0 >= 0.0D && d1 >= 0.0D && d2 >= 0.0D) {
+             int i = 0;
+             int j = 0;
++            final long key = entity.blockPosition().asLong();
++            final DensityData data = block2DensityMap.get(key);
+ 
+             for (float f = 0.0F; f <= 1.0F; f = (float) ((double) f + d0)) {
+                 for (float f1 = 0.0F; f1 <= 1.0F; f1 = (float) ((double) f1 + d1)) {
+@@ -133,16 +157,26 @@ public class Explosion {
+                         double d7 = Mth.lerp((double) f2, axisalignedbb.minZ, axisalignedbb.maxZ);
+                         Vec3 vec3d1 = new Vec3(d5 + d3, d6, d7 + d4);
+ 
+-                        if (entity.level.clip(new ClipContext(vec3d1, source, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, entity)).getType() == HitResult.Type.MISS) {
++                        if (AtlasConfig.ProcessedAreas && data != null && data.box.contains(vec3d1)) {
++                            i += data.density;
++                        } else if (entity.level.clip(new ClipContext(vec3d1, source, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, entity)).getType() == HitResult.Type.MISS) {
+                             ++i;
+                         }
+-
+                         ++j;
+                     }
+                 }
+             }
+ 
+-            return (float) i / (float) j;
++            final float density = (float) i / (float) j;
++            if (AtlasConfig.ProcessedAreas) {
++                if (data != null && density == data.density && data.isIntersecting(axisalignedbb)) {
++                    data.expand(axisalignedbb);
++                } else if (density == 0.0f || density == 1.0f) {
++                    block2DensityMap.put(key, new DensityData(axisalignedbb, density));
++                }
++            }
++            return density;
++
+         } else {
+             return 0.0F;
+         }
+@@ -173,9 +207,6 @@ public class Explosion {
+         boolean firstloop = false;
+         Optional<Float> cachedOptional = Optional.empty();
+         Set<Long> ccU = Sets.newHashSet();
+-        Map<Long, BlockState> blockstateCache = new HashMap<>();
+-        Map<Long, FluidState> fluidstateCache = new HashMap<>();
+-        Map<Long, Float> explosionResistanceCache = new HashMap<>();
+         if (!inWater) {
+             for (int k = 0; k < 16; ++k) {
+                 for (i = 0; i < 16; ++i) {

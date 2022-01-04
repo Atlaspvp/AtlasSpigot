@@ -1,0 +1,274 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: stanvonderhtlwienwestlol <dusek.s03@htlwienwest.at>
+Date: Tue, 4 Jan 2022 17:25:47 +0100
+Subject: [PATCH] Column Based Dispensers and Instant Merge
+
+
+diff --git a/src/main/java/net/atlaspvp/AtlasConfig.java b/src/main/java/net/atlaspvp/AtlasConfig.java
+index 442090c6d3ad89d753d7a7605927ba78b812440a..a2f13f63085e37ec4705cef1a198780a57f2ec7b 100644
+--- a/src/main/java/net/atlaspvp/AtlasConfig.java
++++ b/src/main/java/net/atlaspvp/AtlasConfig.java
+@@ -288,4 +288,19 @@ public class AtlasConfig {
+     private static void CombinedExplosions() {
+         CombinedExplosions = getBoolean("settings.cannons.combined-explosions", true);
+     }
++
++    public static boolean ColumnSpawning;
++    private static void ColumnSpawning() {
++        ColumnSpawning = getBoolean("settings.cannons.column-spawning", true);
++    }
++
++    public static boolean InstantMerge;
++    private static void InstantMerge() {
++        InstantMerge = getBoolean("settings.cannons.instant-merge", false);
++    }
++
++    public static int InstantMergeRange;
++    private static void InstantMergeRange() {
++        InstantMergeRange = getInt("settings.cannons.instant-merge-range", 5);
++    }
+ }
+diff --git a/src/main/java/net/atlaspvp/BlowableMaterials.java b/src/main/java/net/atlaspvp/BlowableMaterials.java
+index f8404c0ea777741346d4535f89a0db8437527365..6bf599352a84f0e0d5cca0dcfb529986dbb51c0d 100644
+--- a/src/main/java/net/atlaspvp/BlowableMaterials.java
++++ b/src/main/java/net/atlaspvp/BlowableMaterials.java
+@@ -1,11 +1,9 @@
+ package net.atlaspvp;
+ 
+-import com.destroystokyo.paper.MaterialTags;
+ import org.bukkit.Material;
+ 
+ import java.util.ArrayList;
+ import java.util.List;
+-import java.util.Objects;
+ 
+ public class BlowableMaterials {
+     public static List<Material> blowableList = new ArrayList<>();
+diff --git a/src/main/java/net/minecraft/core/dispenser/DispenseItemBehavior.java b/src/main/java/net/minecraft/core/dispenser/DispenseItemBehavior.java
+index 915c68888963b879bf74dc67cc6ffb174228f9e4..01bd2d27a6169ae27496c273e68573f4d6bd9b5d 100644
+--- a/src/main/java/net/minecraft/core/dispenser/DispenseItemBehavior.java
++++ b/src/main/java/net/minecraft/core/dispenser/DispenseItemBehavior.java
+@@ -4,6 +4,8 @@ import java.util.Iterator;
+ import java.util.List;
+ import java.util.Optional;
+ import java.util.Random;
++
++import net.atlaspvp.AtlasConfig;
+ import net.minecraft.Util;
+ import net.minecraft.core.BlockPos;
+ import net.minecraft.core.BlockSource;
+@@ -880,8 +882,12 @@ public interface DispenseItemBehavior {
+                 PrimedTnt entitytntprimed = new PrimedTnt(worldserver, event.getVelocity().getX(), event.getVelocity().getY(), event.getVelocity().getZ(), (LivingEntity) null);
+                 // CraftBukkit end
+ 
+-                worldserver.addFreshEntity(entitytntprimed);
+-                worldserver.playSound((Player) null, entitytntprimed.getX(), entitytntprimed.getY(), entitytntprimed.getZ(), SoundEvents.TNT_PRIMED, SoundSource.BLOCKS, 1.0F, 1.0F);
++                if (AtlasConfig.ColumnSpawning) {
++                    worldserver.columnSpawning.queueSpawn(entitytntprimed);
++                } else {
++                    worldserver.addFreshEntity(entitytntprimed);
++                    worldserver.playSound((Player) null, entitytntprimed.getX(), entitytntprimed.getY(), entitytntprimed.getZ(), SoundEvents.TNT_PRIMED, SoundSource.BLOCKS, 1.0F, 1.0F);
++                }
+                 worldserver.gameEvent((Entity) null, GameEvent.ENTITY_PLACE, blockposition);
+                 // itemstack.subtract(1); // CraftBukkit - handled above
+                 return stack;
+diff --git a/src/main/java/net/minecraft/server/level/ServerLevel.java b/src/main/java/net/minecraft/server/level/ServerLevel.java
+index 80a676ec1adfdf231cc1a179ee25c5513938d64d..3ae2feada4e79e9f7d3459d5659db0a8cfa4c535 100644
+--- a/src/main/java/net/minecraft/server/level/ServerLevel.java
++++ b/src/main/java/net/minecraft/server/level/ServerLevel.java
+@@ -730,6 +730,9 @@ public class ServerLevel extends Level implements WorldGenLevel {
+         }
+         timings.scheduledBlocks.stopTiming(); // Paper
+ 
++        if (AtlasConfig.ColumnSpawning) {
++            columnSpawning.dispatch();
++        }
+         gameprofilerfiller.popPush("raid");
+         this.timings.raids.startTiming(); // Paper - timings
+         this.raids.tick();
+diff --git a/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java b/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java
+index 5aeef4ff7ac68af43900bc64c0dd999308c9ac68..2db17430abc63d1e768d271d1e571c593e0a4a23 100644
+--- a/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java
++++ b/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java
+@@ -42,7 +42,7 @@ public class PrimedTnt extends Entity {
+         this(EntityType.TNT, world);
+         this.setPos(x, y, z);
+ 
+-        if(AtlasConfig.TNTspread){
++        if (AtlasConfig.TNTspread) {
+             double d3 = world.random.nextDouble() * 6.2831854820251465D;
+             this.setDeltaMovement(-Math.sin(d3) * 0.02D, 0.20000000298023224D, -Math.cos(d3) * 0.02D);
+         } else {this.setDeltaMovement(0D, 0.20000000298023224D, 0D);}
+@@ -72,19 +72,18 @@ public class PrimedTnt extends Entity {
+     @Override
+     public void tick() {
+         //jesus modification - execute merged tnt
+-        if (this.getFuse() - 1 <= 0) {
++        if (this.getFuse() - 1 <= 0 && this.count > 1) {
+             if (AtlasConfig.CombinedExplosions &&
+-                this.getDeltaMovement().x() == 0 &&
++                this.getDeltaMovement().x == 0 &&
+                 this.getDeltaMovement().y == 0 &&
+-                this.getDeltaMovement().z() == 0 &&
+-                this.level.getBlockState(this.blockPosition()).getMaterial().isLiquid()
+-            ) {
++                this.getDeltaMovement().z == 0 &&
++                this.level.getBlockState(this.blockPosition()).getMaterial().isLiquid()) {
+                 this.cancombine = true;
+             } else {
+                 for (int x = 0; x < this.count -1; x++) {
+                     PrimedTnt merged = this.clone();
+                     merged.tick();
+-            }
++                }
+             }
+         }
+ 
+@@ -209,21 +208,31 @@ public class PrimedTnt extends Entity {
+ 
+     //jesus modification - equals
+     public boolean equalsMerge(PrimedTnt t) {
+-        return (this.getFuse() == t.getFuse() &&
+-                this.getY() == t.getY() &&
+-                this.getX() == t.getX() &&
+-                this.getZ() == t.getZ() &&
++        if (this.getFuse() == 80 && AtlasConfig.InstantMerge) {
++            double deltaY = this.yo - t.yo;
++            return (t.getFuse() == 80 &&
++                this.xo == t.xo &&
++                Math.abs(deltaY) <= AtlasConfig.InstantMergeRange &&
++                this.zo == t.zo &&
++                this.getDeltaMovement().x == t.getDeltaMovement().x &&
++                this.getDeltaMovement().y == t.getDeltaMovement().y &&
++                this.getDeltaMovement().z == t.getDeltaMovement().z);
++        } else {
++            return (this.getFuse() == t.getFuse() &&
++                this.xo == t.xo &&
++                this.yo == t.yo &&
++                this.zo == t.zo &&
+                 this.getDeltaMovement().x == t.getDeltaMovement().x &&
+                 this.getDeltaMovement().y == t.getDeltaMovement().y &&
+                 this.getDeltaMovement().z == t.getDeltaMovement().z &&
+-                this.getBoundingBox().equals(t.getBoundingBox())
+-        );
++                this.getBoundingBox().equals(t.getBoundingBox()));
++        }
+     }
+ 
+     //jesus modification - clone
+     @Override
+-    public PrimedTnt clone(){
+-        PrimedTnt neo = new PrimedTnt(this.level, this.getX(), this.getY(), this.getZ(), this.owner);
++    public PrimedTnt clone() {
++        PrimedTnt neo = new PrimedTnt(this.level, this.xo, this.yo, this.zo, this.owner);
+         neo.setPos(this.position());
+         neo.setFuse(this.getFuse());
+         neo.setDeltaMovement(this.getDeltaMovement());
+diff --git a/src/main/java/net/minecraft/world/item/ItemStack.java b/src/main/java/net/minecraft/world/item/ItemStack.java
+index 306bc5cc82b199a194287cb2d59c12d22f5df748..11ccfb177db15c3e09b237aa736a66ebb94a8655 100644
+--- a/src/main/java/net/minecraft/world/item/ItemStack.java
++++ b/src/main/java/net/minecraft/world/item/ItemStack.java
+@@ -321,7 +321,7 @@ public final class ItemStack {
+             ServerLevel world = (ServerLevel) itemactioncontext.getLevel();
+ 
+ 
+-            if((this.getBukkitStack().getType().name().equalsIgnoreCase(AtlasConfig.HealthCheckItem)) && ( world.obB.isBreakable(blockposition, world.getBlockState(blockposition)))) {
++            if ((this.getBukkitStack().getType().name().equalsIgnoreCase(AtlasConfig.HealthCheckItem)) && (world.obB.isBreakable(blockposition, world.getBlockState(blockposition)))) {
+                 entityhuman.getBukkitEntity().sendMessage(world.obB.displayMessage(blockposition, world.getBlockState(blockposition).getBukkitMaterial(), world.getLevel()));
+             }
+ 
+diff --git a/src/main/java/net/minecraft/world/level/Explosion.java b/src/main/java/net/minecraft/world/level/Explosion.java
+index b06d798d75c38b6e79a191852bb0ab8a88fc77cd..da27968dcee43b4379e7826d592c576ba81f7510 100644
+--- a/src/main/java/net/minecraft/world/level/Explosion.java
++++ b/src/main/java/net/minecraft/world/level/Explosion.java
+@@ -165,12 +165,10 @@ public class Explosion {
+         int i;
+         int j;
+ 
+-        BlockPos blockpositionTNT = new BlockPos(this.x, this.y, this.z);
+-        BlockState iblockdataTNT = this.level.getBlockState(blockpositionTNT);
+-        Boolean inWater=false;
+-        if (iblockdataTNT.getMaterial().isLiquid() && AtlasConfig.skipBlockDamageIfWatered == true)
+-        { //Herm, adding a influid check and canceling logic when in fluid during explosion - jesus also adding check for config here
+-            if ((AtlasConfig.ExplodeLava == true && iblockdataTNT.getMaterial() != Material.LAVA) || AtlasConfig.ExplodeLava == false) inWater = true;
++        BlockState iblockdataTNT = this.level.getBlockState(new BlockPos(this.x, this.y, this.z));
++        Boolean inWater = false;
++        if (iblockdataTNT.getMaterial().isLiquid() && AtlasConfig.skipBlockDamageIfWatered) { //Herm, adding a influid check and canceling logic when in fluid during explosion - jesus also adding check for config here
++            if (!AtlasConfig.ExplodeLava || iblockdataTNT.getMaterial() != Material.LAVA) inWater = true;
+         }
+         boolean firstloop = false;
+         Optional<Float> cachedOptional = Optional.empty();
+@@ -178,7 +176,7 @@ public class Explosion {
+         Map<Long, BlockState> blockstateCache = new HashMap<>();
+         Map<Long, FluidState> fluidstateCache = new HashMap<>();
+         Map<Long, Float> explosionResistanceCache = new HashMap<>();
+-        if(!inWater) {
++        if (!inWater) {
+             for (int k = 0; k < 16; ++k) {
+                 for (i = 0; i < 16; ++i) {
+                     for (j = 0; j < 16; ++j) {
+@@ -196,12 +194,12 @@ public class Explosion {
+                             double d5 = this.y;
+                             double d6 = this.z;
+ 
+-                            if(firstloop && AtlasConfig.SkipRayOrigin) {
++                            if (firstloop && AtlasConfig.SkipRayOrigin) {
+                                 //if not the first loop
+                                 // substract cachedoptional from f if its present
+                                 // increase d4 d5 d6
+                                 // do f -= 0.22500001F
+-                                if (cachedOptional.isPresent()){
++                                if (cachedOptional.isPresent()) {
+                                     f -= ((Float) cachedOptional.get() + 0.3F) * 0.3F;
+                                 }
+                                 d4 += d0 * 0.30000001192092896D;
+@@ -235,7 +233,7 @@ public class Explosion {
+                                 }
+ 
+                                 //atlas explode waterlogged blocks
+-                                if (AtlasConfig.ExplodeWaterloggedBlocks == true && !fluid.isEmpty() && !material.isLiquid()) {
++                                if (AtlasConfig.ExplodeWaterloggedBlocks && !fluid.isEmpty() && !material.isLiquid()) {
+                                     //org.bukkit.Bukkit.getLogger().info("waterlogged detected");
+                                     //this doesnt work idk why
+                                     //iblockdata.setValue(BlockStateProperties.WATERLOGGED, false);
+@@ -244,7 +242,7 @@ public class Explosion {
+                                 }
+ 
+                                 //atlas explode lava
+-                                if (AtlasConfig.ExplodeLava == true && material == Material.LAVA) {
++                                if (AtlasConfig.ExplodeLava && material == Material.LAVA) {
+                                     set.add(blockposition);
+                                 }
+ 
+@@ -305,9 +303,9 @@ public class Explosion {
+             Boolean itemblowup = true;
+ 
+             if (AtlasConfig.ExplosionProofItems && entity instanceof ItemEntity && !AtlasConfig.DontBlowList.isEmpty()) {
+-                if (AtlasConfig.DontBlowList.contains("*")){
++                if (AtlasConfig.DontBlowList.contains("*")) {
+                     itemblowup = false;
+-                } else{
++                } else {
+                     ItemStack item = ((ItemEntity) entity).getItem();
+                     org.bukkit.Material bukkitmaterial =  item.getBukkitStack().getType();
+                     List<org.bukkit.Material> bukkitlist = BlowableMaterials.blowableList;
+diff --git a/src/main/java/net/minecraft/world/level/Level.java b/src/main/java/net/minecraft/world/level/Level.java
+index a12e3881fc119ff691f88d379b67711a8a493661..eda8caff45c9dd62d6ab4fd6e26100b74b671844 100644
+--- a/src/main/java/net/minecraft/world/level/Level.java
++++ b/src/main/java/net/minecraft/world/level/Level.java
+@@ -18,6 +18,7 @@ import java.util.function.Supplier;
+ import javax.annotation.Nullable;
+ 
+ import net.atlaspvp.BreakableUnbreakables;
++import net.atlaspvp.ColumnSpawning;
+ import net.minecraft.CrashReport;
+ import net.minecraft.CrashReportCategory;
+ import net.minecraft.ReportedException;
+@@ -104,6 +105,7 @@ import org.bukkit.event.world.GenericGameEvent;
+ 
+ public abstract class Level implements LevelAccessor, AutoCloseable {
+ 
++    public ColumnSpawning columnSpawning = new ColumnSpawning();
+     protected static final Logger LOGGER = LogManager.getLogger();
+     public static final Codec<ResourceKey<Level>> RESOURCE_KEY_CODEC = ResourceLocation.CODEC.xmap(ResourceKey.elementKey(Registry.DIMENSION_REGISTRY), ResourceKey::location);
+     public static final ResourceKey<Level> OVERWORLD = ResourceKey.create(Registry.DIMENSION_REGISTRY, new ResourceLocation("overworld"));
