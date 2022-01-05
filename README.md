@@ -9,6 +9,9 @@ Current Features:
 - Entity Merging (TNT and FallingBlock)
 - Combined Explosions
 - Explosion Water Check
+- Column Based Dispensing
+- Instant Merge
+- Processed Areas Skip
 - Other Optimisations
 - Explode Waterlogged Blocks
 - Explode Lava
