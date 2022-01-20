@@ -1,0 +1,54 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Samsuik <kfian294ma4@gmail.com>
+Date: Thu, 20 Jan 2022 20:38:49 +0000
+Subject: [PATCH] Optimise getBestNeighborSignal
+
+
+diff --git a/src/main/java/net/minecraft/world/level/Level.java b/src/main/java/net/minecraft/world/level/Level.java
+index 32516c8c4c29942c57bb46c3f324f796a971790e..5eeb291d6c85e525295b433d1c9003328b304b7b 100644
+--- a/src/main/java/net/minecraft/world/level/Level.java
++++ b/src/main/java/net/minecraft/world/level/Level.java
+@@ -1207,6 +1207,33 @@ public abstract class Level implements LevelAccessor, AutoCloseable {
+         return this.getSignal(pos.below(), Direction.DOWN) > 0 ? true : (this.getSignal(pos.above(), Direction.UP) > 0 ? true : (this.getSignal(pos.north(), Direction.NORTH) > 0 ? true : (this.getSignal(pos.south(), Direction.SOUTH) > 0 ? true : (this.getSignal(pos.west(), Direction.WEST) > 0 ? true : this.getSignal(pos.east(), Direction.EAST) > 0))));
+     }
+ 
++    // AtlasSpigot start - optimise getBestNeighborSignal
++    private int getNeighborSignal(final BlockPos pos, final Direction direction) {
++        BlockState state = this.getBlockState(pos);
++        int power = state.getSignal(this, pos, direction);
++        return state.isRedstoneConductor(this, pos) ? Math.max(power, this.getDirectSignalTo(pos, direction)) : power;
++    }
++
++    /*
++     * Significantly faster version of getDirectSignalTo to be used with getBestNeighborSignal.
++     * This reduces the amount of unnecessary calls to getDirectSignal from 36 to 28 which is a ~30% reduction.
++     */
++    private int getDirectSignalTo(final BlockPos pos, final Direction direction) {
++        int power = 0;
++
++        for (Direction next : DIRECTIONS) {
++            if (next != direction.getOpposite() && (next.getAxis() != Direction.Axis.Y || direction.getAxis().isVertical())) {
++                power = Math.max(this.getDirectSignal(pos.relative(next), next), power);
++            }
++
++            if (power >= 15) {
++                break;
++            }
++        }
++
++        return power;
++    }
++
+     public int getBestNeighborSignal(BlockPos pos) {
+         int i = 0;
+         Direction[] aenumdirection = Level.DIRECTIONS;
+@@ -1214,7 +1241,8 @@ public abstract class Level implements LevelAccessor, AutoCloseable {
+ 
+         for (int k = 0; k < j; ++k) {
+             Direction enumdirection = aenumdirection[k];
+-            int l = this.getSignal(pos.relative(enumdirection), enumdirection);
++            int l = this.getNeighborSignal(pos.relative(enumdirection), enumdirection);
++            // AtlasSpigot end
+ 
+             if (l >= 15) {
+                 return 15;
