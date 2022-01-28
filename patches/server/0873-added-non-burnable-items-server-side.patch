@@ -1,0 +1,84 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: stanvonderhtlwienwestlol <dusek.s03@htlwienwest.at>
+Date: Sat, 29 Jan 2022 00:59:28 +0100
+Subject: [PATCH] added non burnable items (server side)
+
+
+diff --git a/src/main/java/net/atlaspvp/AtlasConfig.java b/src/main/java/net/atlaspvp/AtlasConfig.java
+index 42c4cc67f998ad2aebdf702362c631f18bdc4997..a4b5e3daae1b4e9f593fcdd99548e565eaf1c28e 100644
+--- a/src/main/java/net/atlaspvp/AtlasConfig.java
++++ b/src/main/java/net/atlaspvp/AtlasConfig.java
+@@ -256,6 +256,13 @@ public class AtlasConfig {
+         BlowableMaterials.init(getList("settings.patches.explosion-proof-items.items", defaultlist));
+     }
+ 
++    public static List<String> DontBurnList;
++    private static void DontBurnList() {
++        List<String> defaultlist = new ArrayList<>();
++        defaultlist.add("spawner");
++        BurnableMaterials.init(getList("settings.patches.fire-proof-items.items", defaultlist));
++    }
++
+ 
+     public static String HealthCheckItem;
+     private static void HealthCheckItem() {
+diff --git a/src/main/java/net/atlaspvp/BurnableMaterials.java b/src/main/java/net/atlaspvp/BurnableMaterials.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..5c9a707028eea8a696c64b94d0714481063526b7
+--- /dev/null
++++ b/src/main/java/net/atlaspvp/BurnableMaterials.java
+@@ -0,0 +1,19 @@
++package net.atlaspvp;
++
++import org.bukkit.Material;
++
++import java.util.ArrayList;
++import java.util.List;
++
++public class BurnableMaterials {
++    public static List<Material> burnableList = new ArrayList<>();
++
++    public static void init(List<String> l) {
++        burnableList.clear();
++        l.forEach(m -> {
++            burnableList.add(Material.matchMaterial(m));
++        });
++        if (AtlasConfig.DontBurnList != null) AtlasConfig.DontBurnList.clear();
++        AtlasConfig.DontBurnList = l;
++    }
++}
+diff --git a/src/main/java/net/minecraft/world/entity/item/ItemEntity.java b/src/main/java/net/minecraft/world/entity/item/ItemEntity.java
+index 063f3e4c67e6716c9a03dbe4b72eafd32e4f0d53..f4ba9bf8a531a60722fff08cb55e75f744fbf4c8 100644
+--- a/src/main/java/net/minecraft/world/entity/item/ItemEntity.java
++++ b/src/main/java/net/minecraft/world/entity/item/ItemEntity.java
+@@ -5,6 +5,10 @@ import java.util.List;
+ import java.util.Objects;
+ import java.util.UUID;
+ import javax.annotation.Nullable;
++
++import net.atlaspvp.AtlasConfig;
++import net.atlaspvp.BlowableMaterials;
++import net.atlaspvp.BurnableMaterials;
+ import net.minecraft.core.BlockPos;
+ import net.minecraft.nbt.CompoundTag;
+ import net.minecraft.network.chat.Component;
+@@ -34,6 +38,7 @@ import net.minecraft.server.MinecraftServer;
+ import net.minecraft.server.level.ServerLevel;
+ import net.minecraft.sounds.SoundSource;
+ import net.minecraft.stats.Stats;
++import org.bukkit.Bukkit;
+ import org.bukkit.event.entity.EntityPickupItemEvent;
+ import org.bukkit.event.player.PlayerPickupItemEvent;
+ // CraftBukkit end
+@@ -322,7 +327,10 @@ public class ItemEntity extends Entity {
+             return false;
+         } else if (!this.getItem().getItem().canBeHurtBy(source)) {
+             return false;
+-        } else {
++        } else if (AtlasConfig.DontBurnList.contains("*") || BurnableMaterials.burnableList.contains(this.getItem().getBukkitStack().getType())) {
++            return false;
++        }
++        else {
+             // CraftBukkit start
+             if (org.bukkit.craftbukkit.event.CraftEventFactory.handleNonLivingEntityDamageEvent(this, source, amount)) {
+                 return false;
