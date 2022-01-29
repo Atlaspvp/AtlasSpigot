@@ -1,0 +1,62 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: RealGromit <89483608+RealGromit@users.noreply.github.com>
+Date: Sat, 15 Jan 2022 15:00:13 +0100
+Subject: [PATCH] Fixed webbust not working with column spawning
+
+
+diff --git a/src/main/java/net/atlaspvp/DirectionSave.java b/src/main/java/net/atlaspvp/DirectionSave.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..6cdc24c39840f4cd7e5502b03c9183f62835c2dd
+--- /dev/null
++++ b/src/main/java/net/atlaspvp/DirectionSave.java
+@@ -0,0 +1,8 @@
++package net.atlaspvp;
++
++import net.minecraft.core.Direction;
++
++public class DirectionSave {
++
++    public Direction direction = null;
++}
+diff --git a/src/main/java/net/minecraft/core/dispenser/DispenseItemBehavior.java b/src/main/java/net/minecraft/core/dispenser/DispenseItemBehavior.java
+index 01bd2d27a6169ae27496c273e68573f4d6bd9b5d..2546dd0a9522474627c47a0cf77f9c53242606ee 100644
+--- a/src/main/java/net/minecraft/core/dispenser/DispenseItemBehavior.java
++++ b/src/main/java/net/minecraft/core/dispenser/DispenseItemBehavior.java
+@@ -883,6 +883,9 @@ public interface DispenseItemBehavior {
+                 // CraftBukkit end
+ 
+                 if (AtlasConfig.ColumnSpawning) {
++                    if (worldserver.directionSave.direction != null && worldserver.directionSave.direction != pointer.getBlockState().getValue(DispenserBlock.FACING)) {
++                        worldserver.columnSpawning.dispatch();
++                    }
+                     worldserver.columnSpawning.queueSpawn(entitytntprimed);
+                 } else {
+                     worldserver.addFreshEntity(entitytntprimed);
+@@ -890,6 +893,7 @@ public interface DispenseItemBehavior {
+                 }
+                 worldserver.gameEvent((Entity) null, GameEvent.ENTITY_PLACE, blockposition);
+                 // itemstack.subtract(1); // CraftBukkit - handled above
++                worldserver.directionSave.direction = pointer.getBlockState().getValue(DispenserBlock.FACING);
+                 return stack;
+             }
+         }));
+diff --git a/src/main/java/net/minecraft/world/level/Level.java b/src/main/java/net/minecraft/world/level/Level.java
+index eda8caff45c9dd62d6ab4fd6e26100b74b671844..32516c8c4c29942c57bb46c3f324f796a971790e 100644
+--- a/src/main/java/net/minecraft/world/level/Level.java
++++ b/src/main/java/net/minecraft/world/level/Level.java
+@@ -19,6 +19,7 @@ import javax.annotation.Nullable;
+ 
+ import net.atlaspvp.BreakableUnbreakables;
+ import net.atlaspvp.ColumnSpawning;
++import net.atlaspvp.DirectionSave;
+ import net.minecraft.CrashReport;
+ import net.minecraft.CrashReportCategory;
+ import net.minecraft.ReportedException;
+@@ -105,6 +106,7 @@ import org.bukkit.event.world.GenericGameEvent;
+ 
+ public abstract class Level implements LevelAccessor, AutoCloseable {
+ 
++    public DirectionSave directionSave = new DirectionSave();
+     public ColumnSpawning columnSpawning = new ColumnSpawning();
+     protected static final Logger LOGGER = LogManager.getLogger();
+     public static final Codec<ResourceKey<Level>> RESOURCE_KEY_CODEC = ResourceLocation.CODEC.xmap(ResourceKey.elementKey(Registry.DIMENSION_REGISTRY), ResourceKey::location);
