@@ -1,0 +1,78 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Spottedleaf <Spottedleaf@users.noreply.github.com>
+Date: Sat, 1 Jan 2022 05:19:37 -0800
+Subject: [PATCH] Validate usernames
+
+
+diff --git a/src/main/java/com/destroystokyo/paper/PaperConfig.java b/src/main/java/com/destroystokyo/paper/PaperConfig.java
+index 61e364e95d1c8b80963d2c46366701b837107232..f7a8aad4d42bcd409eb869966e3a4312e8296298 100644
+--- a/src/main/java/com/destroystokyo/paper/PaperConfig.java
++++ b/src/main/java/com/destroystokyo/paper/PaperConfig.java
+@@ -473,6 +473,11 @@ public class PaperConfig {
+         set("settings.unsupported-settings.allow-tnt-duplication", null);
+     }
+ 
++    public static boolean performUsernameValidation = true;
++    private static void performUsernameValidation() {
++        performUsernameValidation = getBoolean("settings.unsupported-settings.perform-username-validation", performUsernameValidation);
++    }
++
+     public static boolean allowHeadlessPistons;
+     private static void allowHeadlessPistons() {
+         config.set("settings.unsupported-settings.allow-headless-pistons-readme", "This setting controls if players should be able to create headless pistons.");
+diff --git a/src/main/java/net/minecraft/server/network/ServerLoginPacketListenerImpl.java b/src/main/java/net/minecraft/server/network/ServerLoginPacketListenerImpl.java
+index 494ca8fa8c742d4eac9fb11878d3b3170d850265..3d7f0fc6ef611273f83562d8b92a5714fbd47121 100644
+--- a/src/main/java/net/minecraft/server/network/ServerLoginPacketListenerImpl.java
++++ b/src/main/java/net/minecraft/server/network/ServerLoginPacketListenerImpl.java
+@@ -229,10 +229,38 @@ public class ServerLoginPacketListenerImpl implements ServerLoginPacketListener
+         // Paper end
+     }
+ 
++    // Paper start - validate usernames
++    public static boolean validateUsername(String in) {
++        if (in == null || in.isEmpty() || in.length() > 16) {
++            return false;
++        }
++
++        for (int i = 0, len = in.length(); i < len; ++i) {
++            char c = in.charAt(i);
++
++            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || (c == '_' || c == '.')) {
++                continue;
++            }
++
++            return false;
++        }
++
++        return true;
++    }
++    // Paper end - validate usernames
++
+     @Override
+     public void handleHello(ServerboundHelloPacket packet) {
+         Validate.validState(this.state == ServerLoginPacketListenerImpl.State.HELLO, "Unexpected hello packet", new Object[0]);
+         this.gameProfile = packet.getGameProfile();
++        // Paper start - validate usernames
++        if (com.destroystokyo.paper.PaperConfig.isProxyOnlineMode() && com.destroystokyo.paper.PaperConfig.performUsernameValidation) {
++            if (!validateUsername(this.gameProfile.getName())) {
++                ServerLoginPacketListenerImpl.this.disconnect("Failed to verify username!");
++                return;
++            }
++        }
++        // Paper end - validate usernames
+         if (this.server.usesAuthentication() && !this.connection.isMemoryConnection()) {
+             this.state = ServerLoginPacketListenerImpl.State.KEY;
+             this.connection.send(new ClientboundHelloPacket("", this.server.getKeyPair().getPublic().getEncoded(), this.nonce));
+diff --git a/src/main/java/net/minecraft/server/players/PlayerList.java b/src/main/java/net/minecraft/server/players/PlayerList.java
+index eaa005c1c9b4386bcdbe1d6eb28c3eca7635066c..46e6e68f78d07c04cd2f4d477dca7a06313c20e9 100644
+--- a/src/main/java/net/minecraft/server/players/PlayerList.java
++++ b/src/main/java/net/minecraft/server/players/PlayerList.java
+@@ -705,7 +705,7 @@ public abstract class PlayerList {
+ 
+         for (int i = 0; i < this.players.size(); ++i) {
+             entityplayer = (ServerPlayer) this.players.get(i);
+-            if (entityplayer.getUUID().equals(uuid)) {
++            if (entityplayer.getUUID().equals(uuid) || (com.destroystokyo.paper.PaperConfig.isProxyOnlineMode() && entityplayer.getGameProfile().getName().equalsIgnoreCase(gameprofile.getName()))) { // Paper - validate usernames
+                 list.add(entityplayer);
+             }
+         }
