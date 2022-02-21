@@ -1,0 +1,61 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: stanvonderhtlwienwestlol <dusek.s03@htlwienwest.at>
+Date: Mon, 21 Feb 2022 18:20:45 +0100
+Subject: [PATCH] fixed tunneled tnt unmerging too early
+
+
+diff --git a/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java b/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java
+index 2db17430abc63d1e768d271d1e571c593e0a4a23..bbf2de88466264f133c797115597ddf6f7e8c38c 100644
+--- a/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java
++++ b/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java
+@@ -72,20 +72,7 @@ public class PrimedTnt extends Entity {
+     @Override
+     public void tick() {
+         //jesus modification - execute merged tnt
+-        if (this.getFuse() - 1 <= 0 && this.count > 1) {
+-            if (AtlasConfig.CombinedExplosions &&
+-                this.getDeltaMovement().x == 0 &&
+-                this.getDeltaMovement().y == 0 &&
+-                this.getDeltaMovement().z == 0 &&
+-                this.level.getBlockState(this.blockPosition()).getMaterial().isLiquid()) {
+-                this.cancombine = true;
+-            } else {
+-                for (int x = 0; x < this.count -1; x++) {
+-                    PrimedTnt merged = this.clone();
+-                    merged.tick();
+-                }
+-            }
+-        }
++        PrimedTnt initial = this.clone();
+ 
+         if (level.spigotConfig.currentPrimedTnt++ > level.spigotConfig.maxTntTicksPerTick) { return; } // Spigot
+         if (!this.isNoGravity()) {
+@@ -98,12 +85,28 @@ public class PrimedTnt extends Entity {
+             this.discard();
+             return;
+         }
++
+         // Paper end
+         this.setDeltaMovement(this.getDeltaMovement().scale(0.98D));
+         if (this.onGround) {
+             this.setDeltaMovement(this.getDeltaMovement().multiply(0.7D, -0.5D, 0.7D));
+         }
+ 
++        if (this.getFuse() - 1 <= 0 && this.count > 1) {
++            if (AtlasConfig.CombinedExplosions &&
++                this.getDeltaMovement().x == 0 &&
++                this.getDeltaMovement().y == 0 &&
++                this.getDeltaMovement().z == 0 &&
++                this.level.getBlockState(this.blockPosition()).getMaterial().isLiquid()) {
++                this.cancombine = true;
++            } else {
++                for (int x = 0; x < this.count -1; x++) {
++                    PrimedTnt merged = initial.clone();
++                    merged.tick();
++                }
++            }
++        }
++
+         int i = this.getFuse() - 1;
+ 
+         this.setFuse(i);
