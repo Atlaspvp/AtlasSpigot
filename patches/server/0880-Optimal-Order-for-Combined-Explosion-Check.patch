@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: stanvonderhtlwienwestlol <dusek.s03@htlwienwest.at>
+Date: Tue, 22 Feb 2022 16:45:59 +0100
+Subject: [PATCH] Optimal Order for Combined Explosion Check
+
+
+diff --git a/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java b/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java
+index be9f9c62a43f00825494bfd5e6eb90b7ba896037..4e9d1144a3d65804b56a2aac8055efb0477ecc15 100644
+--- a/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java
++++ b/src/main/java/net/minecraft/world/entity/item/PrimedTnt.java
+@@ -78,10 +78,11 @@ public class PrimedTnt extends Entity {
+             vtnt.tick();
+ 
+             if (AtlasConfig.CombinedExplosions &&
++                vtnt.level.getBlockState(vtnt.blockPosition()).getMaterial().isLiquid() &&
+                 ((this.getDeltaMovement().x == 0 &&
+                 this.getDeltaMovement().y == 0 &&
+-                this.getDeltaMovement().z == 0) || this.distanceTo(vtnt) > 8)&&
+-                vtnt.level.getBlockState(vtnt.blockPosition()).getMaterial().isLiquid()) {
++                this.getDeltaMovement().z == 0) || this.distanceTo(vtnt) > 8))
++                 {
+                 this.cancombine = true;
+             } else {
+                 for (int x = 0; x < this.count -1; x++) {
