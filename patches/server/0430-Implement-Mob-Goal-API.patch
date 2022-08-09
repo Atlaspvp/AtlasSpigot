@@ -5,10 +5,10 @@ Subject: [PATCH] Implement Mob Goal API
 
 
 diff --git a/build.gradle.kts b/build.gradle.kts
-index f802d9e803b406cb9b5b4bce7de6858eba0fae7e..27f8a99f35a22f334e8023c1c9048e3a88a63d6f 100644
+index f7555720d22fdf642d36a1c0d8a9933ab3544b68..df0b06d0c582e9ec9f5dff74456e0ace64fc079f 100644
 --- a/build.gradle.kts
 +++ b/build.gradle.kts
-@@ -55,6 +55,7 @@ dependencies {
+@@ -46,6 +46,7 @@ dependencies {
  
      implementation("net.fabricmc:mapping-io:0.3.0") // Paper - needed to read mappings for stacktrace deobfuscation
  
@@ -798,7 +798,7 @@ index fabd20265863751ad980ee4a697f3f0d47df101f..3a4da2bb86a742985d309eb325dc843a
          LOOK,
          JUMP,
 diff --git a/src/main/java/org/bukkit/craftbukkit/CraftServer.java b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
-index 1e34f8d2c3b14ed6a42930099d3130c4d589d48c..df5a9d6b1b8117080ede57f443dc79b875145461 100644
+index 4cb95a3757205d010ca652e79a12c596f433b300..73fbd6f092ecbc016d53588c4eafabfa3604a1b5 100644
 --- a/src/main/java/org/bukkit/craftbukkit/CraftServer.java
 +++ b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
 @@ -2570,5 +2570,11 @@ public final class CraftServer implements Server {

@@ -6,7 +6,7 @@ Subject: [PATCH] Deobfuscate stacktraces in log messages, crash reports, and
 
 
 diff --git a/build.gradle.kts b/build.gradle.kts
-index a482ad74b9a5d06a982ac2a6d9b6c5dc9f664f46..974f0bbbd3d271d28ce884490dc68b68849a07c3 100644
+index 2955dc6db42ed1f057f6817e7ccae5be9f231585..f7555720d22fdf642d36a1c0d8a9933ab3544b68 100644
 --- a/build.gradle.kts
 +++ b/build.gradle.kts
 @@ -1,7 +1,9 @@
@@ -19,19 +19,7 @@ index a482ad74b9a5d06a982ac2a6d9b6c5dc9f664f46..974f0bbbd3d271d28ce884490dc68b68
  import java.util.Locale
  
  plugins {
-@@ -12,6 +14,11 @@ plugins {
- 
- repositories {
-     maven("https://libraries.minecraft.net/")
-+    // Paper start
-+    maven("https://maven.fabricmc.net/") {
-+        mavenContent { includeModule("net.fabricmc", "mapping-io") }
-+    }
-+    // Paper end
- }
- 
- dependencies {
-@@ -46,6 +53,8 @@ dependencies {
+@@ -42,6 +44,8 @@ dependencies {
  
      implementation("io.netty:netty-all:4.1.65.Final") // Paper
  
@@ -40,7 +28,7 @@ index a482ad74b9a5d06a982ac2a6d9b6c5dc9f664f46..974f0bbbd3d271d28ce884490dc68b68
      testImplementation("junit:junit:4.13.1")
      testImplementation("org.hamcrest:hamcrest-library:1.3")
  }
-@@ -95,6 +104,7 @@ relocation {
+@@ -91,6 +95,7 @@ relocation {
  
      relocate("org.jline:jline-terminal-jansi", "org.jline" to cb("jline"))
      sequenceOf(
@@ -48,7 +36,7 @@ index a482ad74b9a5d06a982ac2a6d9b6c5dc9f664f46..974f0bbbd3d271d28ce884490dc68b68
          "commons-codec:commons-codec" to "org.apache.commons.codec",
          "commons-io:commons-io" to "org.apache.commons.io",
          //"it.unimi.dsi:fastutil" to "it.unimi", // Paper - don't relocate fastutil
-@@ -139,6 +149,45 @@ tasks.shadowJar {
+@@ -135,6 +140,45 @@ tasks.shadowJar {
      transform(ModifiedLog4j2PluginsCacheFileTransformer::class.java)
  }
  

@@ -157,7 +157,7 @@ index 3db1f50262df75dc99fd5a1224985cd9f5f14c9f..6611aebafb14b83bce3eeb87701e2edc
      private static final int MIN_PROTOCOL_ID = -1;
      private static final int MAX_PROTOCOL_ID = 2;
 diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
-index 53db2468b3bde473fd90a218047db8149c4e7755..8be15a63be90720ce34a7c0cb696a59d864396f8 100644
+index 9cd9889992c6954f30decf0c308456aa2cca2cc2..4aa6bccf74770cc49e1bb9071f0a5c17043ef50b 100644
 --- a/src/main/java/net/minecraft/server/MinecraftServer.java
 +++ b/src/main/java/net/minecraft/server/MinecraftServer.java
 @@ -1784,7 +1784,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
@@ -208,19 +208,6 @@ index d0f6eb3981a171c0f34870cb0472599d6cca9642..d1b2ba24ef54e01c6249c3b2ca16e80f
      }
  
      public static <T> SortedArraySet<T> create(Comparator<T> comparator) {
-diff --git a/src/main/java/net/minecraft/util/thread/ProcessorMailbox.java b/src/main/java/net/minecraft/util/thread/ProcessorMailbox.java
-index a2bab5980a8fd6d98c20aa601ba0ce97044ce996..d7cc7e12d265a47564c3f1d4af27a3ec8cba284a 100644
---- a/src/main/java/net/minecraft/util/thread/ProcessorMailbox.java
-+++ b/src/main/java/net/minecraft/util/thread/ProcessorMailbox.java
-@@ -93,7 +93,7 @@ public class ProcessorMailbox<T> implements ProfilerMeasured, ProcessorHandle<T>
-     @Override
-     public void run() {
-         try {
--            this.pollUntil((i) -> {
-+            this.pollUntil((int i) -> { // Paper - decompile fix
-                 return i == 0;
-             });
-         } finally {
 diff --git a/src/main/java/net/minecraft/world/entity/ai/village/poi/PoiSection.java b/src/main/java/net/minecraft/world/entity/ai/village/poi/PoiSection.java
 index 75c1c4671fedb425dea20dc4fb0c6cb2304dee83..5a86bc6f552913e2978c61233148db22e3a240f1 100644
 --- a/src/main/java/net/minecraft/world/entity/ai/village/poi/PoiSection.java
@@ -235,7 +222,7 @@ index 75c1c4671fedb425dea20dc4fb0c6cb2304dee83..5a86bc6f552913e2978c61233148db22
                  return poiSet.isValid;
              }), PoiRecord.codec(updateListener).listOf().fieldOf("Records").forGetter((poiSet) -> {
 diff --git a/src/main/java/net/minecraft/world/item/crafting/RecipeManager.java b/src/main/java/net/minecraft/world/item/crafting/RecipeManager.java
-index 38dd114fbfa07a18987cd774ae05060d723247e4..057b92a2948543644618c63abd3f61d1120db4dd 100644
+index 2e2bc7213b7e19e945eba885ff5614f809c81db0..5705fd14e53aea2fb14785277494b69d36cdfcb4 100644
 --- a/src/main/java/net/minecraft/world/item/crafting/RecipeManager.java
 +++ b/src/main/java/net/minecraft/world/item/crafting/RecipeManager.java
 @@ -75,7 +75,7 @@ public class RecipeManager extends SimpleJsonResourceReloadListener {

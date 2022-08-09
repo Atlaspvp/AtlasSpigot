@@ -5,10 +5,10 @@ Subject: [PATCH] Update Log4J
 
 
 diff --git a/build.gradle.kts b/build.gradle.kts
-index e067c69fea1dec79ef8e97cad1c74020b6a3a235..612c4ed60406a69832609a9bdb3e45a7f3de6b74 100644
+index 86e61491936d1b6821bd3776cd95fecf05a9b1b9..c236fe5dc388f8bc0a929f1de04af94c63514208 100644
 --- a/build.gradle.kts
 +++ b/build.gradle.kts
-@@ -33,11 +33,12 @@ dependencies {
+@@ -24,11 +24,12 @@ dependencies {
            all its classes to check if they are plugins.
            Scanning takes about 1-2 seconds so adding this speeds up the server start.
       */

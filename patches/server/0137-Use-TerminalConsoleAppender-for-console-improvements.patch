@@ -19,10 +19,10 @@ Other changes:
     configuration
 
 diff --git a/build.gradle.kts b/build.gradle.kts
-index 1f4c0f2156c588fcbb3b0329a416dc20a4b355a8..ba7f0c199c60c062d399586e5c9a0d3da8ddb013 100644
+index 4bec3711869a1f0cfb324aabcd950cf0d9cce64b..0f88c4b11c0ee4aa46a7b9df0436cc074956987c 100644
 --- a/build.gradle.kts
 +++ b/build.gradle.kts
-@@ -16,7 +16,17 @@ repositories {
+@@ -12,7 +12,17 @@ plugins {
  
  dependencies {
      implementation(project(":Paper-API"))
@@ -112,7 +112,7 @@ index 0000000000000000000000000000000000000000..685deaa0e5d1ddc13e3a7c0471b1cfcf
 +
 +}
 diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
-index 0b70123deec6470c8bcf46df7418086f31e893fe..031bd2ed5c6fd2a859e8a69c48db3938cf71d61b 100644
+index 0e333b878908b2f83d0a8a83ba475aab2a57f192..7557218fb81ffc1fa81add9231923a4e664d3b83 100644
 --- a/src/main/java/net/minecraft/server/MinecraftServer.java
 +++ b/src/main/java/net/minecraft/server/MinecraftServer.java
 @@ -9,6 +9,7 @@ import com.mojang.authlib.GameProfile;
@@ -244,7 +244,7 @@ index 71991aee0d60299f744c896075502d1b436b3e44..0eea43c994e76b466fdda8ecd145d0b1
  
          this.bans = new UserBanList(PlayerList.USERBANLIST_FILE);
 diff --git a/src/main/java/org/bukkit/craftbukkit/CraftServer.java b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
-index 50427b48a0f823cff8826ca205a9af16b2e2fe93..696e2495ee8046c78ed53126db0e6c696c77c00d 100644
+index 978f3fe7c7547a923d015d9102b745f373f0db80..724d82995017118c3f3f71833ee83d9193f8dd7d 100644
 --- a/src/main/java/org/bukkit/craftbukkit/CraftServer.java
 +++ b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
 @@ -47,7 +47,6 @@ import java.util.function.Consumer;

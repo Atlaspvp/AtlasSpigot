@@ -914,7 +914,7 @@ index 0000000000000000000000000000000000000000..3ba094e640d7fe7803e2bbdab8ff3beb
 +    }
 +}
 diff --git a/src/main/java/net/minecraft/server/level/ServerLevel.java b/src/main/java/net/minecraft/server/level/ServerLevel.java
-index ac3ef76f0db5a2d0f02b5e48a8bf511d9b0104d4..5c588c39de11bbabdc2f50ef4204007c622fdc6a 100644
+index 47a73be0451150fd37d921f5e4bae46f994d18c3..573cde2be4155e2dc2332e73a865c0f513420904 100644
 --- a/src/main/java/net/minecraft/server/level/ServerLevel.java
 +++ b/src/main/java/net/minecraft/server/level/ServerLevel.java
 @@ -437,7 +437,7 @@ public class ServerLevel extends Level implements WorldGenLevel {
@@ -927,7 +927,7 @@ index ac3ef76f0db5a2d0f02b5e48a8bf511d9b0104d4..5c588c39de11bbabdc2f50ef4204007c
          int j = this.spigotConfig.viewDistance; // Spigot
          PersistentEntitySectionManager persistententitysectionmanager = this.entityManager;
 diff --git a/src/main/java/net/minecraft/server/level/WorldGenRegion.java b/src/main/java/net/minecraft/server/level/WorldGenRegion.java
-index 0f6b534a4c789a2f09f6c4624e5d58b99c7ed0e6..21d1e0c9c471e9e556b5bd70166a769b46105c7a 100644
+index 023702c616366ebb1c4f9ac80d4eccaa7fa5c9de..cf1cb0996bb06ae7cf56e0ecf0c01f03da7fdd83 100644
 --- a/src/main/java/net/minecraft/server/level/WorldGenRegion.java
 +++ b/src/main/java/net/minecraft/server/level/WorldGenRegion.java
 @@ -77,6 +77,23 @@ public class WorldGenRegion implements WorldGenLevel {
@@ -951,9 +951,9 @@ index 0f6b534a4c789a2f09f6c4624e5d58b99c7ed0e6..21d1e0c9c471e9e556b5bd70166a769b
 +    public <T> void getEntitiesByClass(Class<? extends T> clazz, Entity except, AABB box, List<? super T> into, Predicate<? super T> predicate) {}
 +    // Paper end
 +
-     public WorldGenRegion(ServerLevel world, List<ChunkAccess> list, ChunkStatus chunkstatus, int i) {
+     public WorldGenRegion(ServerLevel world, List<ChunkAccess> list, ChunkStatus chunkstatus, int placementRadius) {
          this.generatingStatus = chunkstatus;
-         this.writeRadiusCutoff = i;
+         this.writeRadiusCutoff = placementRadius;
 diff --git a/src/main/java/net/minecraft/world/entity/Entity.java b/src/main/java/net/minecraft/world/entity/Entity.java
 index e9eacba3816ff3b76c51e9d3011c739b24864355..b7b802053c48c740161747c89cc55ade80094cb7 100644
 --- a/src/main/java/net/minecraft/world/entity/Entity.java
@@ -1077,7 +1077,7 @@ index 325e244c46ec208a2e7e18d71ccbbfcc25fc1bce..94130509e3a7980c378cc95c46821cf0
      }
  
 diff --git a/src/main/java/net/minecraft/world/level/Level.java b/src/main/java/net/minecraft/world/level/Level.java
-index d0cfa782498eca8a13ce7d7f28d5e55ae4e402fa..1dd2e968bde16da2d2da63ca3c30515e1fd5b620 100644
+index 1d5eee4bf026a97feb066c5b25d597381d92cef7..d88ce89dadaa7bd25cdd58dd4ec4592f30c311ce 100644
 --- a/src/main/java/net/minecraft/world/level/Level.java
 +++ b/src/main/java/net/minecraft/world/level/Level.java
 @@ -204,6 +204,50 @@ public abstract class Level implements LevelAccessor, AutoCloseable {

@@ -5,10 +5,10 @@ Subject: [PATCH] Use Velocity compression and cipher natives
 
 
 diff --git a/build.gradle.kts b/build.gradle.kts
-index e789d52955cf9f353cf52af3a5a69bb7b54085bd..e067c69fea1dec79ef8e97cad1c74020b6a3a235 100644
+index 35266258f7eddba51a6e2b334046954213d88237..86e61491936d1b6821bd3776cd95fecf05a9b1b9 100644
 --- a/build.gradle.kts
 +++ b/build.gradle.kts
-@@ -55,6 +55,7 @@ dependencies {
+@@ -46,6 +46,7 @@ dependencies {
      implementation("io.netty:netty-all:4.1.65.Final") // Paper
  
      implementation("net.fabricmc:mapping-io:0.3.0") // Paper - needed to read mappings for stacktrace deobfuscation
@@ -100,7 +100,7 @@ index 50a7058b18a8ca05363b73eaefbd812ef50d53f1..7319da27dfa5029c9893ec04bfd43255
 +    // Paper end
  }
 diff --git a/src/main/java/net/minecraft/network/CompressionDecoder.java b/src/main/java/net/minecraft/network/CompressionDecoder.java
-index efd05c8c1114aab4c237ccbc2e4e935a08c076ee..3569fc49e87b773dce0e59b9069797834ae32613 100644
+index 62b4c8134dbf159c4c72a8c9514198ffd172f34e..88bc50552064ac20f807b4b82af8a54e62b4657a 100644
 --- a/src/main/java/net/minecraft/network/CompressionDecoder.java
 +++ b/src/main/java/net/minecraft/network/CompressionDecoder.java
 @@ -12,13 +12,20 @@ public class CompressionDecoder extends ByteToMessageDecoder {
@@ -112,12 +112,12 @@ index efd05c8c1114aab4c237ccbc2e4e935a08c076ee..3569fc49e87b773dce0e59b906979783
      private boolean validateDecompressed;
  
 +    // Paper start
-     public CompressionDecoder(int compressionThreshold, boolean bl) {
-+        this(null, compressionThreshold, bl);
+     public CompressionDecoder(int compressionThreshold, boolean rejectsBadPackets) {
++        this(null, compressionThreshold, rejectsBadPackets);
 +    }
-+    public CompressionDecoder(com.velocitypowered.natives.compression.VelocityCompressor compressor, int compressionThreshold, boolean bl) {
++    public CompressionDecoder(com.velocitypowered.natives.compression.VelocityCompressor compressor, int compressionThreshold, boolean rejectsBadPackets) {
          this.threshold = compressionThreshold;
-         this.validateDecompressed = bl;
+         this.validateDecompressed = rejectsBadPackets;
 -        this.inflater = new Inflater();
 +        this.inflater = compressor == null ? new Inflater() : null;
 +        this.compressor = compressor;
@@ -168,9 +168,9 @@ index efd05c8c1114aab4c237ccbc2e4e935a08c076ee..3569fc49e87b773dce0e59b906979783
 +    }
 +    // Paper end
 +
-     public void setThreshold(int compressionThreshold, boolean bl) {
+     public void setThreshold(int compressionThreshold, boolean rejectsBadPackets) {
          this.threshold = compressionThreshold;
-         this.validateDecompressed = bl;
+         this.validateDecompressed = rejectsBadPackets;
 diff --git a/src/main/java/net/minecraft/network/CompressionEncoder.java b/src/main/java/net/minecraft/network/CompressionEncoder.java
 index 524c0c674f63cfcb601416a18348f37aabb4e3ff..89bf5066b83e8d79c77c90fce1f7858c06b01730 100644
 --- a/src/main/java/net/minecraft/network/CompressionEncoder.java
@@ -267,7 +267,7 @@ index 524c0c674f63cfcb601416a18348f37aabb4e3ff..89bf5066b83e8d79c77c90fce1f7858c
          return this.threshold;
      }
 diff --git a/src/main/java/net/minecraft/network/Connection.java b/src/main/java/net/minecraft/network/Connection.java
-index 8e90deafe3c2c960290dd944953f546559facc21..291241502bdbb4bac666735b0d6365b612612e04 100644
+index ab4441b035fb043b4cb7870c40c4baa5cd53843c..fb5f2090e17cee53e67482cd72d56d23b81582a0 100644
 --- a/src/main/java/net/minecraft/network/Connection.java
 +++ b/src/main/java/net/minecraft/network/Connection.java
 @@ -657,11 +657,28 @@ public class Connection extends SimpleChannelInboundHandler<Packet<?>> {
@@ -305,14 +305,14 @@ index 8e90deafe3c2c960290dd944953f546559facc21..291241502bdbb4bac666735b0d6365b6
          return this.encrypted;
 @@ -690,16 +707,17 @@ public class Connection extends SimpleChannelInboundHandler<Packet<?>> {
  
-     public void setupCompression(int compressionThreshold, boolean flag) {
+     public void setupCompression(int compressionThreshold, boolean rejectsBadPackets) {
          if (compressionThreshold >= 0) {
 +            com.velocitypowered.natives.compression.VelocityCompressor compressor = com.velocitypowered.natives.util.Natives.compress.get().create(-1); // Paper
              if (this.channel.pipeline().get("decompress") instanceof CompressionDecoder) {
-                 ((CompressionDecoder) this.channel.pipeline().get("decompress")).setThreshold(compressionThreshold, flag);
+                 ((CompressionDecoder) this.channel.pipeline().get("decompress")).setThreshold(compressionThreshold, rejectsBadPackets);
              } else {
--                this.channel.pipeline().addBefore("decoder", "decompress", new CompressionDecoder(compressionThreshold, flag));
-+                this.channel.pipeline().addBefore("decoder", "decompress", new CompressionDecoder(compressor, compressionThreshold, flag)); // Paper
+-                this.channel.pipeline().addBefore("decoder", "decompress", new CompressionDecoder(compressionThreshold, rejectsBadPackets));
++                this.channel.pipeline().addBefore("decoder", "decompress", new CompressionDecoder(compressor, compressionThreshold, rejectsBadPackets)); // Paper
              }
  
              if (this.channel.pipeline().get("compress") instanceof CompressionEncoder) {

@@ -18,7 +18,7 @@ For consistency, the old API methods now forward to use the
 ItemMeta API equivalents, and should deprecate the old API's.
 
 diff --git a/src/main/java/net/minecraft/world/item/ItemStack.java b/src/main/java/net/minecraft/world/item/ItemStack.java
-index ab9cb0bf0321e4130b5bbf2b24b7655e9327d363..c6880228982ef12a37cfa867acb5e564254932b5 100644
+index 8381aa378e4c8982826c1726ea3dbf1bec58401a..8d9e85a24bf4d63f3b75d4bcfe8c7c78e6ba9636 100644
 --- a/src/main/java/net/minecraft/world/item/ItemStack.java
 +++ b/src/main/java/net/minecraft/world/item/ItemStack.java
 @@ -13,6 +13,8 @@ import java.text.DecimalFormatSymbols;
@@ -64,8 +64,8 @@ index ab9cb0bf0321e4130b5bbf2b24b7655e9327d363..c6880228982ef12a37cfa867acb5e564
  
 @@ -747,6 +767,7 @@ public final class ItemStack {
      // Paper end
-     public void setTag(@Nullable CompoundTag tag) {
-         this.tag = tag;
+     public void setTag(@Nullable CompoundTag nbt) {
+         this.tag = nbt;
 +        processEnchantOrder(this.tag); // Paper
          if (this.getItem().canBeDepleted()) {
              this.setDamageValue(this.getDamageValue());
@@ -79,7 +79,7 @@ index ab9cb0bf0321e4130b5bbf2b24b7655e9327d363..c6880228982ef12a37cfa867acb5e564
  
      public boolean isEnchanted() {
 diff --git a/src/main/java/org/bukkit/craftbukkit/inventory/CraftItemStack.java b/src/main/java/org/bukkit/craftbukkit/inventory/CraftItemStack.java
-index d6467a42d54954dffe919482294cb9355f217f21..84f11780a22b3369519fc8f80d6c274360045df7 100644
+index e88df908377450964ae5b6ff97ee97bd2f09c05f..ba70ac49222c517a38e20e86cee1fd38aecb6318 100644
 --- a/src/main/java/org/bukkit/craftbukkit/inventory/CraftItemStack.java
 +++ b/src/main/java/org/bukkit/craftbukkit/inventory/CraftItemStack.java
 @@ -6,7 +6,6 @@ import java.util.Map;

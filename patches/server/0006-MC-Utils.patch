@@ -4987,7 +4987,7 @@ index 0000000000000000000000000000000000000000..850caa39d4875620b05c9a3cc27c65ef
 +    }
 +}
 diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
-index 8be15a63be90720ce34a7c0cb696a59d864396f8..2c2c70e784e9c7bebc6bca1ef48e6992b12b82d5 100644
+index 4aa6bccf74770cc49e1bb9071f0a5c17043ef50b..cd6e03ea9c7347f52bb4163c1eb03b67c3af1f6c 100644
 --- a/src/main/java/net/minecraft/server/MinecraftServer.java
 +++ b/src/main/java/net/minecraft/server/MinecraftServer.java
 @@ -296,6 +296,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
@@ -5037,7 +5037,7 @@ index 8be15a63be90720ce34a7c0cb696a59d864396f8..2c2c70e784e9c7bebc6bca1ef48e6992
              } catch (Throwable throwable) {
                  // Spigot Start
 diff --git a/src/main/java/net/minecraft/server/level/ChunkHolder.java b/src/main/java/net/minecraft/server/level/ChunkHolder.java
-index 6fa6fb852cd5af2009008ac6158251ba5e8cf6fb..bbf2dee8cdd2d8239d9230b1a7fff4f07c2edaf8 100644
+index b318fc9add7df8997825c00c892a0000e1e8d69f..1072998cd4b00bd74e8aed9a17fbf67e31a595cd 100644
 --- a/src/main/java/net/minecraft/server/level/ChunkHolder.java
 +++ b/src/main/java/net/minecraft/server/level/ChunkHolder.java
 @@ -52,9 +52,9 @@ public class ChunkHolder {
@@ -5213,7 +5213,7 @@ index 6fa6fb852cd5af2009008ac6158251ba5e8cf6fb..bbf2dee8cdd2d8239d9230b1a7fff4f0
  
          if (!playerchunk_state1.isOrAfter(playerchunk_state)) {
 diff --git a/src/main/java/net/minecraft/server/level/ChunkMap.java b/src/main/java/net/minecraft/server/level/ChunkMap.java
-index 6df8c7ffd48b18dc0cb0dd9ec826228282e50180..ed21bd46262ac33801c17e6135dd22f99dd78504 100644
+index de53b338a05c23e70b7a9f7849daed8ad13d5272..0dcc5e5a819884bce9de03283f66b98dd093dc2a 100644
 --- a/src/main/java/net/minecraft/server/level/ChunkMap.java
 +++ b/src/main/java/net/minecraft/server/level/ChunkMap.java
 @@ -55,6 +55,7 @@ import net.minecraft.network.protocol.game.ClientboundSetChunkCacheCenterPacket;
@@ -5373,7 +5373,7 @@ index 6df8c7ffd48b18dc0cb0dd9ec826228282e50180..ed21bd46262ac33801c17e6135dd22f9
  
      @Override
 diff --git a/src/main/java/net/minecraft/server/level/ServerChunkCache.java b/src/main/java/net/minecraft/server/level/ServerChunkCache.java
-index 9591f50922343283597bad6d9ac17c175d8ae230..77d98bfa0ad9fc92a8e794b5a4e00c3e471c123a 100644
+index e3c4ff57312df1f897f0731f62744c8c40c4b845..09d541032f7f4b2b38b434413a07b79885e04813 100644
 --- a/src/main/java/net/minecraft/server/level/ServerChunkCache.java
 +++ b/src/main/java/net/minecraft/server/level/ServerChunkCache.java
 @@ -44,8 +44,10 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructureMana
@@ -5764,7 +5764,7 @@ index 9591f50922343283597bad6d9ac17c175d8ae230..77d98bfa0ad9fc92a8e794b5a4e00c3e
  
                  Objects.requireNonNull(playerchunk);
 diff --git a/src/main/java/net/minecraft/server/level/ServerLevel.java b/src/main/java/net/minecraft/server/level/ServerLevel.java
-index eded0e6fd0030f1f01f7e2b16497be768518728e..8115e016109f560f2de78c69285342a42ebd119a 100644
+index 60ef4ff0c9082e737d93b9ab155fe4c5eef652d0..9da2d00cfae804d4a98709f98ddb5210ab5a5010 100644
 --- a/src/main/java/net/minecraft/server/level/ServerLevel.java
 +++ b/src/main/java/net/minecraft/server/level/ServerLevel.java
 @@ -9,6 +9,7 @@ import it.unimi.dsi.fastutil.longs.LongSet;
@@ -5881,7 +5881,7 @@ index eded0e6fd0030f1f01f7e2b16497be768518728e..8115e016109f560f2de78c69285342a4
      public ServerLevel(MinecraftServer minecraftserver, Executor executor, LevelStorageSource.LevelStorageAccess convertable_conversionsession, ServerLevelData iworlddataserver, ResourceKey<Level> resourcekey, DimensionType dimensionmanager, ChunkProgressListener worldloadlistener, ChunkGenerator chunkgenerator, boolean flag, long i, List<CustomSpawner> list, boolean flag1, org.bukkit.World.Environment env, org.bukkit.generator.ChunkGenerator gen, org.bukkit.generator.BiomeProvider biomeProvider) {
          // Objects.requireNonNull(minecraftserver); // CraftBukkit - decompile error
 diff --git a/src/main/java/net/minecraft/server/level/ServerPlayer.java b/src/main/java/net/minecraft/server/level/ServerPlayer.java
-index 6c7c9750d67c914afaf4ecc48facac3189eba75b..89c718e5b975a83b07a114b2b2c6fe31c75cb580 100644
+index d87e23437ee5f930fb5dcba13d5986599f0c1c4c..5f243953d6d9710280bd099b7560c18d30dddfa0 100644
 --- a/src/main/java/net/minecraft/server/level/ServerPlayer.java
 +++ b/src/main/java/net/minecraft/server/level/ServerPlayer.java
 @@ -229,6 +229,8 @@ public class ServerPlayer extends Player {
@@ -5915,7 +5915,7 @@ index 3a4f026c73cdd22d30bdadabbcf24bef969b73e4..0d536d72ac918fbd403397ff369d1014
      private final String name;
      private final Comparator<T> comparator;
 diff --git a/src/main/java/net/minecraft/server/level/WorldGenRegion.java b/src/main/java/net/minecraft/server/level/WorldGenRegion.java
-index 391bae98e542333a431fb48bf0675c0e8a1873ac..0f6b534a4c789a2f09f6c4624e5d58b99c7ed0e6 100644
+index 602245be7f9eb0057399056bd0de9c1a3480dbc1..023702c616366ebb1c4f9ac80d4eccaa7fa5c9de 100644
 --- a/src/main/java/net/minecraft/server/level/WorldGenRegion.java
 +++ b/src/main/java/net/minecraft/server/level/WorldGenRegion.java
 @@ -150,6 +150,26 @@ public class WorldGenRegion implements WorldGenLevel {
@@ -5946,7 +5946,7 @@ index 391bae98e542333a431fb48bf0675c0e8a1873ac..0f6b534a4c789a2f09f6c4624e5d58b9
      public BlockState getBlockState(BlockPos pos) {
          return this.getChunk(SectionPos.blockToSectionCoord(pos.getX()), SectionPos.blockToSectionCoord(pos.getZ())).getBlockState(pos);
 diff --git a/src/main/java/net/minecraft/server/network/ServerGamePacketListenerImpl.java b/src/main/java/net/minecraft/server/network/ServerGamePacketListenerImpl.java
-index 294060d48c624d77e64ddfa19607905cda1be675..2c8fa37694212f03f6c1f760078230b36b0fd1eb 100644
+index d91c6722543c43bf5d8c85171b83a3a7a5d8bf3e..736d3f0e9cf717529ac948b9318c1a5c8efd9a9c 100644
 --- a/src/main/java/net/minecraft/server/network/ServerGamePacketListenerImpl.java
 +++ b/src/main/java/net/minecraft/server/network/ServerGamePacketListenerImpl.java
 @@ -218,9 +218,9 @@ public class ServerGamePacketListenerImpl implements ServerPlayerConnection, Ser
@@ -5981,7 +5981,7 @@ index a4c5edee297af6d68d518b77f706732b5ccbe4de..7bf4bf5cb2c1b54a7e2733091f48f3a8
      @Override
      public void tell(R runnable) {
 diff --git a/src/main/java/net/minecraft/world/entity/Entity.java b/src/main/java/net/minecraft/world/entity/Entity.java
-index c57bde6b2042c0a68cb02f43c28cae0070f38111..a5f704edf4d8afdb088f3a4ac8e3957f8851842d 100644
+index 33a3b47a89f1d0a4074d3aef236060e01e6ba77f..fce3d21070aac24230457fd0cbf6bf99db340df4 100644
 --- a/src/main/java/net/minecraft/world/entity/Entity.java
 +++ b/src/main/java/net/minecraft/world/entity/Entity.java
 @@ -298,6 +298,11 @@ public abstract class Entity implements Nameable, EntityAccess, CommandSource {
@@ -5997,7 +5997,7 @@ index c57bde6b2042c0a68cb02f43c28cae0070f38111..a5f704edf4d8afdb088f3a4ac8e3957f
      public Entity(EntityType<?> type, Level world) {
          this.id = Entity.ENTITY_COUNTER.incrementAndGet();
 diff --git a/src/main/java/net/minecraft/world/entity/LivingEntity.java b/src/main/java/net/minecraft/world/entity/LivingEntity.java
-index 41e5b1a888f2fa5c7fd26095d070898c9e4489eb..fd8c35e896cc03a21c41e846dc5413ce00da47b0 100644
+index 3c5177c8e56168b89d7d4202ab32d64b06c91820..648bec7f8743098bf29a34605ef46914228fe06c 100644
 --- a/src/main/java/net/minecraft/world/entity/LivingEntity.java
 +++ b/src/main/java/net/minecraft/world/entity/LivingEntity.java
 @@ -259,6 +259,7 @@ public abstract class LivingEntity extends Entity {
@@ -6046,7 +6046,7 @@ index 847a11383322ea67bf80dbcabe7272459392f27c..229490d3857ce9f5bba4e6bb4aedcff5
          super(type, world);
          this.xpReward = 5;
 diff --git a/src/main/java/net/minecraft/world/item/ItemStack.java b/src/main/java/net/minecraft/world/item/ItemStack.java
-index c65d1c4982c4ea950dd11d2185d7409e52a55ec5..ab9cb0bf0321e4130b5bbf2b24b7655e9327d363 100644
+index 5af84a8daef999cc66d570c4bfb45b668b795c42..8381aa378e4c8982826c1726ea3dbf1bec58401a 100644
 --- a/src/main/java/net/minecraft/world/item/ItemStack.java
 +++ b/src/main/java/net/minecraft/world/item/ItemStack.java
 @@ -727,6 +727,24 @@ public final class ItemStack {
@@ -6071,8 +6071,8 @@ index c65d1c4982c4ea950dd11d2185d7409e52a55ec5..ab9cb0bf0321e4130b5bbf2b24b7655e
 +        return bukkitStack;
 +    }
 +    // Paper end
-     public void setTag(@Nullable CompoundTag tag) {
-         this.tag = tag;
+     public void setTag(@Nullable CompoundTag nbt) {
+         this.tag = nbt;
          if (this.getItem().canBeDepleted()) {
 @@ -1127,6 +1145,7 @@ public final class ItemStack {
      // CraftBukkit start
@@ -6120,7 +6120,7 @@ index 083122a2e051b23b2cb9bdb8eb70af01af9df400..e85e4a2dfceb0aa40e73b43a5e122a59
      FluidState getFluidState(BlockPos pos);
  
 diff --git a/src/main/java/net/minecraft/world/level/ChunkPos.java b/src/main/java/net/minecraft/world/level/ChunkPos.java
-index 3f77959c98ee6f19423105d23f69bc56a82df54b..439f82a48e6f6ce7b4773505ced32324cacb302d 100644
+index c39591861e758842b840c9ac2e1172344a2c9464..cd984c990f3fac8d968d522f45b8fdd116ed556d 100644
 --- a/src/main/java/net/minecraft/world/level/ChunkPos.java
 +++ b/src/main/java/net/minecraft/world/level/ChunkPos.java
 @@ -16,6 +16,7 @@ public class ChunkPos {
@@ -6184,7 +6184,7 @@ index 3c707d6674b2594b09503b959a31c1f4ad3981e6..c7d499bfc22152e0a49f50a2a8133f31
      public BlockState getBlockState(BlockPos pos) {
          return Blocks.AIR.defaultBlockState();
 diff --git a/src/main/java/net/minecraft/world/level/Level.java b/src/main/java/net/minecraft/world/level/Level.java
-index 8516eef6ba56bd81710a8ad706f0fac8e49d7a3d..8ff3b141b816599759570ae0c7bee35cca7bef11 100644
+index 0f456b0fd91f426d7f71bbe87300c71e45c406c0..1a6faaf70e54a314031e8b96c11dc6be691a01ec 100644
 --- a/src/main/java/net/minecraft/world/level/Level.java
 +++ b/src/main/java/net/minecraft/world/level/Level.java
 @@ -84,6 +84,7 @@ import org.bukkit.craftbukkit.CraftServer;
@@ -6337,7 +6337,7 @@ index 00118cc80ebc31e5fac95c31c07634f0e2904263..138b6792bc6ee26e0b9aaaef7bf58fb2
      @Override
      public BlockEntity getBlockEntity(BlockPos pos) {
 diff --git a/src/main/java/net/minecraft/world/level/block/state/BlockBehaviour.java b/src/main/java/net/minecraft/world/level/block/state/BlockBehaviour.java
-index 505731735126e81a4cc768311dce337385e5503f..adf1c04d34383d088a3fc8c06cdc8b55552c354f 100644
+index 751b5fb8272a342f40903d51f38b8aafd73675b1..6a3baee561146f2b9d6f36a01b03125c1334b214 100644
 --- a/src/main/java/net/minecraft/world/level/block/state/BlockBehaviour.java
 +++ b/src/main/java/net/minecraft/world/level/block/state/BlockBehaviour.java
 @@ -603,14 +603,14 @@ public abstract class BlockBehaviour {

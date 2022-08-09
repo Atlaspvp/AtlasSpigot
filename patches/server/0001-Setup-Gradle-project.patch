@@ -28,10 +28,10 @@ index 67fb370cad6924895a6b27052dbd5c1767e3f0c9..bb338269c9e3bef4c274157c490d8b8f
 +/.factorypath
 diff --git a/build.gradle.kts b/build.gradle.kts
 new file mode 100644
-index 0000000000000000000000000000000000000000..b64b0200a6b19f93ba0592ecc6f29b4534df4812
+index 0000000000000000000000000000000000000000..0179e2ebaa655611328d9d7a9f86955b5bbf7cb6
 --- /dev/null
 +++ b/build.gradle.kts
-@@ -0,0 +1,170 @@
+@@ -0,0 +1,166 @@
 +import com.github.jengelman.gradle.plugins.shadow.transformers.Log4j2PluginsCacheFileTransformer
 +import com.github.jengelman.gradle.plugins.shadow.transformers.Transformer
 +import io.papermc.paperweight.util.*
@@ -42,10 +42,6 @@ index 0000000000000000000000000000000000000000..b64b0200a6b19f93ba0592ecc6f29b45
 +    java
 +    `maven-publish`
 +    id("com.github.johnrengelman.shadow")
-+}
-+
-+repositories {
-+    maven("https://libraries.minecraft.net/")
 +}
 +
 +dependencies {

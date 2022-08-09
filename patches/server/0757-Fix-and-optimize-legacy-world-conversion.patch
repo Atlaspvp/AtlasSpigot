@@ -164,15 +164,15 @@ index 87705fc8ee32016bf5ca533eb278bf32df08d3a3..b9bcbcf509ebb59d15082ce0faef8e40
      private static void convertRegion(RegistryAccess.RegistryHolder registryManager, File directory, File file, BiomeSource biomeSource, int i, int j, ProgressListener progressListener) {
          String string = file.getName();
 diff --git a/src/main/java/net/minecraft/world/level/storage/PrimaryLevelData.java b/src/main/java/net/minecraft/world/level/storage/PrimaryLevelData.java
-index 4d0af984490b556a9911c3b8fdca1e168e6fe932..c20e5d69b4ad8adcdaffb56e4e2a24596ae16edf 100644
+index c85edd7e06720c7a116c6842e47223d593b78130..68ce6c0d6ef46462200eb05026cbc6b50b366319 100644
 --- a/src/main/java/net/minecraft/world/level/storage/PrimaryLevelData.java
 +++ b/src/main/java/net/minecraft/world/level/storage/PrimaryLevelData.java
 @@ -212,7 +212,7 @@ public class PrimaryLevelData implements ServerLevelData, WorldData {
-             levelTag.putUUID("WanderingTraderId", this.wanderingTraderId);
+             levelNbt.putUUID("WanderingTraderId", this.wanderingTraderId);
          }
  
--        levelTag.putString("Bukkit.Version", Bukkit.getName() + "/" + Bukkit.getVersion() + "/" + Bukkit.getBukkitVersion()); // CraftBukkit
-+        if (Bukkit.getServer() != null) levelTag.putString("Bukkit.Version", Bukkit.getName() + "/" + Bukkit.getVersion() + "/" + Bukkit.getBukkitVersion()); // CraftBukkit // Paper - server may not be started yet
+-        levelNbt.putString("Bukkit.Version", Bukkit.getName() + "/" + Bukkit.getVersion() + "/" + Bukkit.getBukkitVersion()); // CraftBukkit
++        if (Bukkit.getServer() != null) levelNbt.putString("Bukkit.Version", Bukkit.getName() + "/" + Bukkit.getVersion() + "/" + Bukkit.getBukkitVersion()); // CraftBukkit // Paper - server may not be started yet
      }
  
      @Override
